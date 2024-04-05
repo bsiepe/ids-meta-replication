@@ -1,0 +1,691 @@
+---
+title: "Robustness replication of *A Bayesian Meta-Analysis of the Acoustic Properties of Infant-Directed Speech*"
+author: "Björn S. Siepe"
+---
+
+# 0. Preparation
+Load the necessary packages and set the seed for reproducibility.
+```{r setup}
+library(brms)
+library(tidyverse)
+library(here)
+# library(renv)
+library(tidybayes)
+library(RoBMA)
+library(osfr)
+library(bayesplot)
+set.seed(35032)
+``` 
+
+# 1. Publication Bias 
+Here, we will use Robust Bayesian Meta-Analyses to fit an ensemble of meta-analytic models, which will then be averaged with Bayesian Model Averaging. These models also estimate a publication bias adjustment.
+https://fbartos.github.io/RoBMA/reference/RoBMA.reg.html
+## F0
+The authors selected the model with language, age, task & environment as predictors as the best model. 
+
+TODO not sure how to deal with multiple imputation yet. Maybe average
+
+TODO how to deal with hedges g
+https://forum.cogsci.nl/discussion/7239/robma-random-effects-meta-analysis-with-meta-regression
+
+### Intercept-Only
+```{r f0-robma}
+data_F0 <- readRDS(here("data/data_F0_multiple_final.RData"))
+
+baseline_te <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Age_months + 
+                    Language + Environment + Task + (1 | Language/id_site/measurement_num))
+
+# priors1 <- c(prior(normal(0, 2.5), class = Intercept),
+#              prior(normal(1, 1), class = sd),
+#              prior(normal(0, 1), class = b),
+#              prior(normal(0, 0.05), class = b, coef = "Age_months"),
+#              prior(gamma(2, 0.1), class = nu))
+
+# TODO hedges g instead of d
+
+F0_pub_bias <- RoBMA(
+      y = data_F0[[1]]$Effect_Size, 
+      se = data_F0[[1]]$Effect_Size_se, 
+      study_ids = data_F0[[1]]$id_site,
+      priors_bias = NULL,
+      parallel = TRUE, 
+      seed = 35037)
+
+# Why is this a multivariate model?
+```
+Regression
+
+
+
+## VSA
+The authors selected the model with age & language as predictors as the best model.
+
+```{r vsa-robma}
+
+```
+
+
+
+## AR
+The authors selected the model with task, age & language as predictors as the best model.
+
+```{r ar-robma}
+
+```
+
+## VD
+The authors selected the model with age & language as predictors as the best model.
+
+```{r vd-robma}
+
+```
+
+
+
+## F0V
+The authors selected the model with task, age & language as predictors as the best model.
+
+```{r f0v-robma}
+
+```
+
+
+
+# 2. Compare Rank-Order of Model Weights
+
+
+```{r}
+# Load all relevant models into the environment
+# TODO
+# which ones are missing?
+# 
+file_names <- list.files(path = "models/replication/")
+# F0:
+# F0_environment, F0_task
+# VSA: 
+# VSA_environment, VSA_task
+# AR: 
+# AR_environment, AR_task
+# VD:
+# VD_environment, VD_task
+# F0V:
+# F0V_environment, F0V_task
+```
+
+First estimate the missing models, using the same prior specification as used in the models with language as predictor, but using the same random effects as in all priors. It is unclear to us why the random effects structure was changed for language. 
+Environment as predictor: 
+```{r}
+baseline_envir <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Environment + (1 | Language/id_site/measurement_num))
+priors2 <- c(prior(normal(0, 2.5), class = Intercept),
+             prior(normal(1, 1), class = sd),
+             prior(normal(0, 1), class = b),
+             prior(gamma(2, 0.1), class = nu))
+
+F0_environment_m <- 
+  brm_multiple(
+    baseline_envir,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0_multiple_final, 
+    family = student,
+    prior = priors2,
+    file = here("models", "replication", "F0_environment_m_rep"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+VSA_environment_m <- 
+  brm_multiple(
+    baseline_envir,
+    save_pars = save_pars(all = TRUE),
+    data = data_VSA_multiple_final, 
+    family = student,
+    prior = priors2,
+    file = here("models", "replication", "VSA_environment_m_rep"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+AR_environment_m <- 
+  brm_multiple(
+    baseline_envir,
+    save_pars = save_pars(all = TRUE),
+    data = data_AR_multiple_final, 
+    family = student,
+    prior = priors2,
+    file = here("models", "replication", "AR_environment_m_rep"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+VD_environment_m <- 
+  brm_multiple(
+    baseline_envir,
+    save_pars = save_pars(all = TRUE),
+    data = data_VD_multiple_final, 
+    family = student,
+    prior = priors2,
+    file = here("models", "replication", "VD_environment_m_rep"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+pp_check(VD_environment_m, ndraws = 50)
+
+F0V_environment_m <- 
+  brm_multiple(
+    baseline_envir,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0V_multiple_final, 
+    family = student,
+    prior = priors2,
+    file = here("models", "replication", "F0V_environment_m_rep"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+pp_check(F0V_language_m, ndraws = 50)
+```
+
+
+Task as predictor
+```{r}
+baseline_task <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Task + (1 | Language/id_site/measurement_num))
+priors2 <- c(prior(normal(0, 2.5), class = Intercept),
+             prior(normal(1, 1), class = sd),
+             prior(normal(0, 1), class = b),
+             prior(gamma(2, 0.1), class = nu))
+
+F0_task_m <- 
+  brm_multiple(
+    baseline_task,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0_multiple_final, 
+    family = student,
+    prior = priors2,
+    file = here("models", "replication", "F0_task_m_rep"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+VSA_task_m <- 
+  brm_multiple(
+    baseline_task,
+    save_pars = save_pars(all = TRUE),
+    data = data_VSA_multiple_final, 
+    family = student,
+    prior = priors2,
+    file = here("models", "replication", "VSA_task_m_rep"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+AR_task_m <- 
+  brm_multiple(
+    baseline_task,
+    save_pars = save_pars(all = TRUE),
+    data = data_AR_multiple_final, 
+    family = student,
+    prior = priors2,
+    file = here("models", "replication", "AR_task_m_rep"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+VD_task_m <- 
+  brm_multiple(
+    baseline_task,
+    save_pars = save_pars(all = TRUE),
+    data = data_VD_multiple_final, 
+    family = student,
+    prior = priors2,
+    file = here("models", "replication", "VD_task_m_rep"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+pp_check(VD_task_m, ndraws = 50)
+
+F0V_task_m <- 
+  brm_multiple(
+    baseline_task,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0V_multiple_final, 
+    family = student,
+    prior = priors2,
+    file = here("models", "replication", "F0V_task_m_rep"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+```
+
+
+Now load in all relevant models to the environment
+```{r, eval = FALSE}
+options(future.globals.maxSize= +Inf)
+
+file_names <- c("F0_environment_m_rep.rds", "F0_task_m_rep.rds", "F0_task_environment_language_age_m_rep.rds", 
+                "F0_age_language_m_rep.rds", "F0_age_m_rep.rds", "F0_language_m_rep.rds", "F0_intercept_m_rep.rds")
+
+final_names <- c("F0_environment", "F0_task", "F0_task_environment_language_age", 
+                 "F0_age_language", "F0_age", "F0_language", "F0_intercept")
+
+for (i in seq_along(file_names)) {
+  model <- readRDS(paste0("models/replication/", file_names[i]))
+  assign(final_names[i], model, envir = .GlobalEnv)
+}
+# weights_F0_loo <- model_weights(F0_environment, F0_task, F0_task_environment_language_age, F0_age_language, F0_age, F0_language, F0_intercept, weights = "loo")
+# weights_F0_stack <- model_weights(F0_environment, F0_task, F0_task_environment_language_age, F0_age_language, F0_age, F0_language, F0_intercept, weights = "stacking")
+# weights_F0_waic <- model_weights(F0_environment, F0_task, F0_task_environment_language_age, F0_age_language, F0_age, F0_language, F0_intercept, weights = "waic")
+weights_F0_pmp <- post_prob(F0_environment, F0_task, F0_task_environment_language_age, F0_age_language, F0_age, F0_language, F0_intercept)
+
+# VSA
+file_names <- c("VSA_environment_m_rep.rds", "VSA_task_m_rep.rds", "VSA_task_environment_language_age_m_rep.rds", 
+                "VSA_age_language_m_rep.rds", "VSA_age_m_rep.rds", "VSA_language_m_rep.rds", "VSA_intercept_m_rep.rds")
+
+final_names <- c("VSA_environment", "VSA_task", "VSA_task_environment_language_age", 
+                 "VSA_age_language", "VSA_age", "VSA_language", "VSA_intercept")
+
+for (i in seq_along(file_names)) {
+  model <- readRDS(paste0("models/replication/", file_names[i]))
+  assign(final_names[i], model, envir = .GlobalEnv)
+}
+# weights_VSA_loo <- model_weights(VSA_environment, VSA_task, VSA_task_environment_language_age, VSA_age_language, VSA_age, VSA_language, VSA_intercept, weights = "loo")
+# weights_VSA_stack <- model_weights(VSA_environment, VSA_task, VSA_task_environment_language_age, VSA_age_language, VSA_age, VSA_language, VSA_intercept, weights = "stacking")
+# weights_VSA_waic <- model_weights(VSA_environment, VSA_task, VSA_task_environment_language_age, VSA_age_language, VSA_age, VSA_language, VSA_intercept, weights = "waic")
+weights_VSA_pmp <- post_prob(VSA_environment, VSA_task, VSA_task_environment_language_age, VSA_age_language, VSA_age, VSA_language, VSA_intercept)
+
+# AR
+file_names <- c("AR_environment_m_rep.rds", "AR_task_m_rep.rds", "AR_task_environment_language_age_m_rep.rds", 
+                "AR_age_language_m_rep.rds", "AR_age_m_rep.rds", "AR_language_m_rep.rds", "AR_intercept_m_rep.rds")
+
+final_names <- c("AR_environment", "AR_task", "AR_task_environment_language_age", 
+                 "AR_age_language", "AR_age", "AR_language", "AR_intercept")
+
+for (i in seq_along(file_names)) {
+  model <- readRDS(paste0("models/replication/", file_names[i]))
+  assign(final_names[i], model, envir = .GlobalEnv)
+}
+# weights_AR_loo <- model_weights(AR_environment, AR_task, AR_task_environment_language_age, AR_age_language, AR_age, AR_language, AR_intercept, weights = "loo")
+# weights_AR_stack <- model_weights(AR_environment, AR_task, AR_task_environment_language_age, AR_age_language, AR_age, AR_language, AR_intercept, weights = "stacking")
+# # didn't work because of different dimensions of log lik matrix
+# weights_AR_waic <- model_weights(AR_environment, AR_task, AR_task_environment_language_age, AR_age_language, AR_age, AR_language, AR_intercept, weights = "waic")
+weights_AR_pmp <- post_prob(AR_environment, AR_task, AR_task_environment_language_age, AR_age_language, AR_age, AR_language, AR_intercept)
+
+# VD
+file_names <- c("VD_environment_m_rep.rds", "VD_task_m_rep.rds", "VD_task_environment_language_age_m_rep.rds", 
+                "VD_age_language_m_rep.rds", "VD_age_m_rep.rds", "VD_language_m_rep.rds", "VD_intercept_m_rep.rds")
+
+final_names <- c("VD_environment", "VD_task", "VD_task_environment_language_age", 
+                 "VD_age_language", "VD_age", "VD_language", "VD_intercept")
+
+for (i in seq_along(file_names)) {
+  model <- readRDS(paste0("models/replication/", file_names[i]))
+  assign(final_names[i], model, envir = .GlobalEnv)
+}
+# weights_VD_loo <- model_weights(VD_environment, VD_task, VD_task_environment_language_age, VD_age_language, VD_age, VD_language, VD_intercept, weights = "loo")
+# stacking also did not work here
+# weights_VD_stack <- model_weights(VD_environment, VD_task, VD_task_environment_language_age, VD_age_language, VD_age, VD_language, VD_intercept, weights = "stacking")
+# weights_VD_waic <- model_weights(VD_environment, VD_task, VD_task_environment_language_age, VD_age_language, VD_age, VD_language, VD_intercept, weights = "waic")
+# weights_VD_pmp <- post_prob(VD_environment, VD_task, VD_task_environment_language_age, VD_age_language, VD_age, VD_language, VD_intercept)
+
+# F0V
+file_names <- c("F0V_environment_m_rep.rds", "F0V_task_m_rep.rds", "F0V_task_environment_language_age_m_rep.rds", 
+                "F0V_age_language_m_rep.rds", "F0V_age_m_rep.rds", "F0V_language_m_rep.rds", "F0V_intercept_m_rep.rds")
+
+final_names <- c("F0V_environment", "F0V_task", "F0V_task_environment_language_age", 
+                 "F0V_age_language", "F0V_age", "F0V_language", "F0V_intercept")
+
+for (i in seq_along(file_names)) {
+  model <- readRDS(paste0("models/replication/", file_names[i]))
+  assign(final_names[i], model, envir = .GlobalEnv)
+}
+# weights_F0V_loo <- model_weights(F0V_environment, F0V_task, F0V_task_environment_language_age, F0V_age_language, F0V_age, F0V_language, F0V_intercept, weights = "loo")
+weights_F0V_stack <- model_weights(F0V_environment, F0V_task, F0V_task_environment_language_age, F0V_age_language, F0V_age, F0V_language, F0V_intercept, weights = "stacking")
+# weights_F0V_waic <- model_weights(F0V_environment, F0V_task, F0V_task_environment_language_age, F0V_age_language, F0V_age, F0V_language, F0V_intercept, weights = "waic")
+# weights_F0V_pmp <- post_prob(F0V_environment, F0V_task, F0V_task_environment_language_age, F0V_age_language, F0V_age, F0V_language, F0V_intercept)
+
+```
+
+Running this code for the first time results in an error for AR and VD: `Each log-likelihood matrix must have the same dimensions.` 
+Upon inspection, we can find that some models have different dimensions, because `VD_intercept` and `AR_task_environment_language_age` were run with 10,000 instead of 5,000 iterations (without further explanation).
+```{r}
+dim(log_lik(VD_age_language))
+dim(log_lik(VD_intercept))  # has more dimensions
+
+dim(log_lik(AR_age))
+dim(log_lik(AR_task_environment_language_age)) # has more dimensions
+```
+
+We therefore re-run these models with less iterations: 
+
+
+
+Save all weights 
+```{r}
+weights_list <- list(
+  weights_AR_waic = weights_AR_waic, 
+  weights_AR_loo = weights_AR_loo,
+  weights_F0_waic = weights_F0_waic,
+  weights_F0_loo = weights_F0_loo,
+  weights_F0V_waic = weights_F0V_waic,
+  weights_F0V_loo = weights_F0V_loo,
+  weights_VSA_waic = weights_VSA_waic,
+  weights_VSA_loo = weights_VSA_loo,
+  weights_VD_waic = weights_VD_waic,
+  weights_VD_loo = weights_VD_loo
+)
+
+saveRDS(object = weights_list, 
+        file = here("output/replication/weights_list.RDS"))
+
+```
+
+Reload all results
+```{r}
+weights_list <- readRDS(here("output/replication/weights_list.RDS"))
+```
+
+
+Then create a comparison table for model rank:
+```{r}
+rank(weights_list$weights_AR_waic)
+
+
+```
+
+
+
+
+
+
+
+
+# 3. Sampler Settings
+The authors used relatively unorthodox sampler settings by choosing an `adapt_delta` of 0.99 and a `max_treedepth` of 20. We will compare fitting the models selected as best by the authors to the same models with more standard sampler settings.
+
+## F0
+The authors selected the model with language, age, task & environment as predictors as the best model. 
+
+```{r f0-sampler}
+data_F0_multiple_final <- readRDS(here("data/data_F0_multiple_final.RData"))
+
+baseline_te <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Age_months + 
+                    Language + Environment + Task + (1 | Language/id_site/measurement_num))
+
+priors1 <- c(prior(normal(0, 2.5), class = Intercept),
+             prior(normal(1, 1), class = sd),
+             prior(normal(0, 1), class = b),
+             prior(normal(0, 0.05), class = b, coef = "Age_months"),
+             prior(gamma(2, 0.1), class = nu))
+
+F0_task_environment_language_age_m_sampler <- 
+  brm_multiple(
+    baseline_te,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "replication", "sampler_check", "F0_task_environment_language_age_m_rep_sampler"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.8,
+      max_treedepth = 10 ))
+
+summary(F0_task_environment_language_age_m_sampler)
+pp_check(F0_task_environment_language_age_m_sampler, ndraws = 100)
+
+```
+
+Now we check convergence: 
+```{r}
+lp_F0 <- bayesplot::log_posterior(F0_task_environment_language_age_m_sampler)
+np_F0 <- bayesplot::nuts_params(F0_task_environment_language_age_m_sampler)
+bayesplot::mcmc_nuts_divergence(np_F0, lp_F0)
+```
+
+```{r}
+bayesplot::mcmc_pairs(F0_task_environment_language_age_m_sampler, np = np_F0, pars = c("Intercept","b_Age_months","b_LanguageBritishEnglish"),
+           off_diag_args = list(size = 0.75))
+```
+
+```{r}
+bayesplot::mcmc_parcoord(F0_task_environment_language_age_m_sampler, np = np_F0, pars = c("Intercept","b_Age_months","b_LanguageBritishEnglish"))
+```
+
+
+
+
+
+Compare results to the original model?
+
+## VSA
+The authors selected the model with age & language as predictors as the best model.
+
+```{r vsa-sampler}
+data_VSA_multiple_final <- readRDS(here("data/data_VSA_multiple_final.RData"))
+
+baseline_f <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + 
+                   Language + Age_months + (1 | Language/id_site/measurement_num))
+
+VSA_age_language_m_sampler <- 
+  brm_multiple(
+    baseline_f,
+    save_pars = save_pars(all = TRUE),
+    data = data_VSA_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "sampler_check", "VSA_age_language_m_rep_sampler"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.80,
+      max_treedepth = 10 ))
+summary(VSA_age_language_m_sampler)
+pp_check(VSA_age_language_m_sampler, ndraws = 100)
+```
+
+As there were no divergent transitions, we compare point estimates to the replicated model using the sampler settings as specified by the authors: 
+```{r}
+source("functions.R")
+VSA_age_language_m <- readRDS(here("models/replication/VSA_age_language_m_rep.rds"))
+diff_point_est(VSA_age_language_m_sampler, VSA_age_language_m)
+
+```
+
+
+## AR
+The authors selected the model with task, age & language as predictors as the best model.
+
+```{r ar-sampler}
+data_AR_multiple_final <- readRDS(here("data/data_AR_multiple_final.RData"))
+baseline_t <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Age_months + 
+                   Language + Task + (1 | Language/id_site/measurement_num))
+
+AR_task_language_age_m_sampler <- 
+  brm(
+    baseline_t,
+    save_pars = save_pars(all = TRUE),
+    data = data_AR_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "sampler_check", "AR_task_language_age_m_rep_sampler"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.80,
+      max_treedepth = 10 ))
+
+summary(AR_task_language_age_m_sampler)
+pp_check(AR_task_language_age_m_sampler, ndraws = 100)
+
+```
+
+## VD
+The authors selected the model with age & language as predictors as the best model.
+
+```{r vd-sampler}
+data_VD_multiple_final <- readRDS(here("data/data_VD_multiple_final.RData"))
+baseline_f <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + 
+                   Language + Age_months + (1 | Language/id_site/measurement_num))
+
+VD_age_language_m_sampler <- 
+  brm_multiple(
+    baseline_f,
+    save_pars = save_pars(all = TRUE),
+    data = data_VD_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "sampler_check", "VD_age_language_m_rep_sampler"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.80,
+      max_treedepth = 10 ))
+
+summary(VD_age_language_m_sampler)
+pp_check(VD_age_language_m_sampler, ndraws = 100)
+
+```
+
+
+
+## F0V
+The authors selected the model with task, age & language as predictors as the best model.
+
+```{r f0v-sampler}
+data_F0V_multiple_final <- readRDS(here("data/data_F0V_multiple_final.RData"))
+F0V_task_language_age_m_sampler <- 
+  brm_multiple(
+    baseline_t,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0V_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "sampler_check", "F0V_task_language_age_m_rep_sampler"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+summary(F0V_task_language_age_m_sampler)
+pp_check(F0V_task_language_age_m_sampler, ndraws = 100)
+
+```
+
+As there were no divergent transitions, we compare point estimates to the original model: 
+
+```{r}
+
+```
+
+
+## Check the models with different sampler settings
+
+
+
+
+
+
+# 4. Minor Things
+
+
+
+
+
