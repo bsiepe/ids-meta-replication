@@ -6,9 +6,17 @@ This robustness replication is part of the Institute4Replication (I4R) effort to
 
 ## File structure
 
+### Main Folder
 - `original_analysis.Rmd` contains the code for the additional analyses. It can also be used to load the data provided by the original authors.
 - `robustness-replication.Rmd` contains the code for the robustness replication. We perform additional analyses of publication bias, estimating model weights, and MCMC sampler settings. 
 - `functions.R` contains auxiliary functions used for reproducibility analyses.
+
+### `/data/`
+Contains all raw data used.
+
+### `/models` 
+Contains all original models, and our replications. 
+
 
 ## Citation
 
