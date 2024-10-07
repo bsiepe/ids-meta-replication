@@ -7,17 +7,27 @@ This robustness replication is part of the Institute4Replication (I4R) effort to
 ## File structure
 
 ### Main Folder
-- `original_analysis.Rmd` contains the code for the additional analyses. It can also be used to load the data provided by the original authors.
-- `robustness-replication.Rmd` contains the code for the robustness replication. We perform additional analyses of publication bias, estimating model weights, and MCMC sampler settings. 
+- `original_analysis.qmd` contains the code for the additional analyses. It can also be used to load the data provided by the original authors.
+- `robustness_replication.qmd` contains the code for the robustness replication. We perform additional analyses of publication bias, estimating model weights, and MCMC sampler settings. 
 - `functions.R` contains auxiliary functions used for reproducibility analyses.
 
 ### `/data/`
-Contains all raw data used.
+Contains all raw data used. 
 
 ### `/models` 
-Contains all original models, and our replications. 
+Contains all original models, and our replications. TODO check if this is too large.
 
 
 ## Citation
 
-Please cite as XXX
+Please cite as TODO
+
+## Reproduce
+TODO update docker and makefile for final versions
+
+If you have installed Docker and Make, you can use the following files to reproduce the main results within a Docker container:
+
+Run `make docker` from the root directory of this git repository. This will install all necessary
+dependencies using the `Dockerfile` and `Makefile`. RStudio Server can then be opened from a browser
+(<http://localhost:8787>), and `original_analysis.qmd` and `robustness_replication.qmd` can then be rerun.
+
