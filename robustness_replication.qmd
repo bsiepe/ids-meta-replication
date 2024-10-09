@@ -29,6 +29,7 @@ format:
 execute:
   message: false
   warning: false
+  eval: false
 ---
 
 # 0. Preparation
@@ -359,7 +360,7 @@ F0V_task_m <-
 ```
 
 
-Now load in all relevant models to the environment
+Now load in all relevant models to the environment:
 ```{r, eval = FALSE}
 options(future.globals.maxSize= +Inf)
 
@@ -557,8 +558,6 @@ bayesplot::mcmc_pairs(F0_task_environment_language_age_m_sampler, np = np_F0, pa
 ```{r}
 bayesplot::mcmc_parcoord(F0_task_environment_language_age_m_sampler, np = np_F0, pars = c("Intercept","b_Age_months","b_LanguageBritishEnglish"))
 ```
-
-
 
 
 

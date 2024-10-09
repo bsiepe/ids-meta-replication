@@ -1,4 +1,3 @@
-
 # Auxiliary Functions for IDS-Meta-Replication ----------------------------
 
 # Compare Point Estimates of BRMS objects ---------------------------------

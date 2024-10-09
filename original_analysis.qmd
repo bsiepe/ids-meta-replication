@@ -29,6 +29,7 @@ format:
 execute:
   message: false
   warning: false
+  eval: false
 ---
 
 ```{r setup, include=FALSE}
@@ -3973,7 +3974,17 @@ ER_sensitivity_plot_all <- plot_grid(ER_sensitivity_plot_intercept,
 20: Models to report average effect size across languages & scaled age
 ---------------
 
-We use this code to report a comparison to Table 1 in the original paper.
+We use this code to report a comparison to Table 1 in the original paper. First, reload data if necessary:
+
+```{r}
+data_F0_final <- readRDS(here("data/data_F0_final.RData"))
+data_VSA_final <- readRDS(here("data/data_VSA_final.RData"))
+data_AR_final <- readRDS(here("data/data_AR_final.RData"))
+data_VD_final <- readRDS(here("data/data_VD_final.RData"))
+data_F0V_final <- readRDS(here("data/data_F0V_final.RData"))
+
+```
+
 
 ```{r}
 center_scale <- function(x){
@@ -4062,7 +4073,7 @@ post_preds <- hypothesis(VSA_environment_report, "((Intercept*30 + LanguageBisla
 
 post_preds
 
-# THEY FORGOT ID SITE HERE
+# BS: THEY FORGOT ID SITE HERE
 data_AR_final_report <- data_AR_final %>%
   select(Study, Language, Task, Environment, Age_months, Effect_Size, Effect_Size_se, measurement_num, id_site) %>%
   drop_na() %>%
@@ -4184,7 +4195,7 @@ R1: Compare Point Estimates
 
 We use a function to compare point estimates of the original models to the replicated models. 
 
-```{r}
+```{r, eval = TRUE}
 source("functions.R")
 diff_comp <- compare_point_ests("models", "models/replication")
 
@@ -4195,15 +4206,29 @@ df_diff_comp <- diff_comp_clean %>%
   bind_rows(., .id = "model")
 
 
+# save resulting data frame
+saveRDS(df_diff_comp, here("output/replication/point_estimates_comparison.RDS"))
 ```
+
+
+R2: Compare Best Models
+---------------
+
+
+
+
+R3: Check "Robust Predictors"
+---------------
+
+TODO create a function that checks for CrI of individual models
 
 
 
 
 # Session Info
 
-```{r}
-pander::pander(session)
+```{r, eval = TRUE}
+pander::pander(sessionInfo())
 ```
 
 
