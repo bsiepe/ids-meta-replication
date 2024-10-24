@@ -21,11 +21,40 @@ diff_point_est <- function(fit1,
 }
 
 
+# Compare evidence ratio and random effects -------------------------------
+
+
+diff_random_effects <- function(fit1, 
+                                fit2,
+                                ...){
+  # Extract point estimates
+  pe1 <- bayestestR::point_estimate(fit1, effects = "random")
+  pe2 <- bayestestR::point_estimate(fit2, effects = "random")
+  
+  # Subtract columns Median, Mean, MAP from each other
+  df_diff <- data.frame(
+    Parameter = pe1$Parameter,
+    Median_Diff = pe1$Median - pe2$Median,
+    Mean_Diff = pe1$Mean - pe2$Mean,
+    MAP_Diff = pe1$MAP - pe2$MAP
+  )
+  
+  return(df_diff)
+}
+
+
+extract_evidence_ratio <- function(filepath, 
+                                   hypothesis_string) {
+  model <- readRDS(filepath)  
+  hypothesis_result <- brms::hypothesis(model, hypothesis_string)  
+  return(hypothesis_result$hypothesis$Evid.Ratio)  
+}
 
 # Read in replication and original model ----------------------------------
 
 compare_point_ests <- function(original_folder, 
                                replication_folder,
+                               random_effects = FALSE,
                                server = TRUE){
   original_mods_full <- list.files(original_folder, pattern = ".rds", full.names = TRUE)
   # Exclude nonimputed and prior predictive files
@@ -47,8 +76,11 @@ compare_point_ests <- function(original_folder,
   for (i in seq_along(original_mods_full)){
     original_mod <- readRDS(original_mods_full[i])
     replication_mod <- tryCatch({readRDS(replication_mods[i])}, error = function(e) NA)
-    diff_list[[i]] <- tryCatch({diff_point_est(original_mod, replication_mod)}, error = function(e) NA)
-    names(diff_list)[i] <- original_mods[i]
+    diff_list[[i]]$point_est <- tryCatch({diff_point_est(original_mod, replication_mod)}, error = function(e) NA)
+    names(diff_list)[i]$point_est <- original_mods[i]
+    if(isTRUE(random_effects)){
+      diff_list[[i]]$random_effect <- tryCatch({diff_random_effect(original_mod, replication_mod)}, error = function(e) NA)
+    }
     rm(original_mod)
     rm(replication_mod)
   }
