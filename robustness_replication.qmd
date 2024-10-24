@@ -361,6 +361,8 @@ F0V_task_m <-
 
 
 Now load in all relevant models to the environment:
+
+TODO this is lacking "task_language_age" for every model, which was omitted from the original code. 
 ```{r, eval = FALSE}
 options(future.globals.maxSize= +Inf)
 
@@ -447,8 +449,71 @@ weights_F0V_stack <- model_weights(F0V_environment, F0V_task, F0V_task_environme
 
 ```
 
+Cleaner code:
+
+```{r}
+options(future.globals.maxSize = +Inf)
+
+load_models <- function(prefix) {
+  file_names <- c("environment_m_rep.rds", "task_m_rep.rds", "task_environment_language_age_m_rep.rds", "task_language_age_m_rep.rds",
+                  "age_language_m_rep.rds", "age_m_rep.rds", "language_m_rep.rds", "intercept_m_rep.rds")
+  final_names <- c("environment", "task", "task_environment_language_age", "task_language_age", "age_language", "age", "language", "intercept")
+  
+  models <- list()
+  for (i in seq_along(file_names)) {
+    model <- readRDS(paste0("models/replication/", prefix, "_", file_names[i]))
+    models[[final_names[i]]] <- model
+  }
+  return(models)
+}
+
+# safely compute weights
+# TODO change to lapply probably
+compute_weights_safe <- function(models, method) {
+  tryCatch({
+     do.call(model_weights, c(models, list(weights = method)))
+  }, error = function(e) {
+    message(paste("Error in model_weights with method", method, ": ", e$message))
+    return(NULL)
+  })
+}
+
+# compute all model weights for a given prefix
+compute_model_weights <- function(prefix) {
+  models <- load_models(prefix)
+  
+  weights <- list(
+    loo = compute_weights_safe(models, "loo"),
+    stacking = compute_weights_safe(models, "stacking"),
+    waic = compute_weights_safe(models, "waic"),
+    pmp = tryCatch({
+      post_prob(models$environment, models$task, models$task_environment_language_age,
+                models$task_language_age, models$age_language, models$age, models$language, models$intercept)
+    }, error = function(e) {
+      message(paste("Error in post_prob for prefix", prefix, ": ", e$message))
+      return(NULL)
+    })
+  )
+  
+  rm(models) # Remove models from memory after calculation
+  return(weights)
+}
+
+# iterate over each prefix
+prefixes <- c("F0", "VSA", "AR", "F0V")
+weights <- list()
+
+for (prefix in prefixes) {
+  message(paste("Computing weights for prefix:", prefix))
+  weights[[prefix]] <- compute_model_weights(prefix)
+}
+```
+
+
+
+
 Running this code for the first time results in an error for AR and VD: `Each log-likelihood matrix must have the same dimensions.` 
-Upon inspection, we can find that some models have different dimensions, because `VD_intercept` and `AR_task_environment_language_age` were run with 10,000 instead of 5,000 iterations (without further explanation).
+Upon inspection, we can find that some models have different dimensions, because `VD_intercept` and `AR_task_environment_language_age` were run with 10,000 instead of 5,000 iterations (without further explanation). We therefore re-ran these models with less iterations. 
 ```{r}
 dim(log_lik(VD_age_language))
 dim(log_lik(VD_intercept))  # has more dimensions
@@ -457,7 +522,16 @@ dim(log_lik(AR_age))
 dim(log_lik(AR_task_environment_language_age)) # has more dimensions
 ```
 
-We therefore re-run these models with less iterations: 
+
+
+
+
+
+
+
+
+
+
 
 
 

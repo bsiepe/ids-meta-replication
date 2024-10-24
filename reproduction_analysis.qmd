@@ -4171,7 +4171,7 @@ post_preds <- hypothesis(F0V_task_report, "((Intercept*22 + LanguageBislama + La
 LanguageItalian + LanguageJapanese + LanguageKenyanFijian + LanguageKorean + LanguageMandarinChinese + 
 LanguageNorwegian + LanguageScottishEnglish + LanguageSriLankanTamil + LanguageSwedish + LanguageTagalog + LanguageUSEnglish + Taskspontaneousspeech) / 22) > 0")
 
-post_preds
+post_preds$hypothesis$Evid.Ratio
 ```
 
 
@@ -4190,14 +4190,15 @@ model_weights(F0V_environment, F0V_task, F0V_task_environment_language_age, F0V_
 
 
 
-R1: Compare Point Estimates
+R1: Compare Estimates
 ---------------
 
 We use a function to compare point estimates of the original models to the replicated models. 
 
-```{r, eval = TRUE}
+```{r, eval = FALSE}
 source("functions.R")
-diff_comp <- compare_point_ests("models", "models/replication")
+diff_comp <- compare_point_ests("models", "models/replication",
+                                random_effects = TRUE)
 
 # remove all NA
 diff_comp_clean <- diff_comp[unlist(unname(lapply(diff_comp, function(x) !is.logical(x))))]
@@ -4210,9 +4211,98 @@ df_diff_comp <- diff_comp_clean %>%
 saveRDS(df_diff_comp, here("output/replication/point_estimates_comparison.RDS"))
 ```
 
+We reload the dataframe and show the results:
+```{r}
+df_diff_comp <- readRDS(here("output/replication/point_estimates_comparison.RDS"))
+```
+
+
+
+In addition, we can compare random effect standard deviations:
+
+```{r, eval = TRUE}
+
+```
+
+
+Also, compare evidence ratios by using each `hypothesis()` defined in section 21 of the original script:
+```{r, eval = TRUE}
+F0_hyp <- "((Intercept*32 + LanguageBislama + LanguageBritishEnglish + LanguageBritishEnglish + LanguageCanadianEnglish + LanguageDanish + LanguageDutch + LanguageEnga + LanguageFinnishSwedish + LanguageFrench + LanguageGerman + LanguageHungarian + LanguageItalian + LanguageJamaicanEnglish + LanguageJapanese + LanguageKannada + LanguageKenyanFijian + LanguageKorean + LanguageMandarinChinese + LanguageMbendjele + LanguageMentawai + LanguageNewZealandEnglish + LanguageNorwegian + LanguageNyangatom + LanguagePolish + LanguageQuechuaAchuar + LanguageQuicheMayan + LanguageSpanish + LanguageSriLankanTamil + LanguageSwedish + LanguageTagalog + LanguageToposa + LanguageTsimane + LanguageUSEnglish + Taskspontaneousspeech + Environmentnaturalistic)/32) > 0"
+
+VSA_hyp <- "((Intercept*30 + LanguageBislama + LanguageBritishEnglish + LanguageCanadianEnglish + LanguageCantoneseChinese + LanguageDanish + LanguageDutch + LanguageEnga + LanguageFinnishSwedish + LanguageFrench +LanguageGerman + LanguageHungarian + LanguageJamaicanEnglish +               LanguageJapanese + LanguageKannada + LanguageMandarinChinese + LanguageMbendjele + LanguageMentawai + LanguageNewZealandEnglish + LanguageNorwegian + LanguageNyangatom + LanguagePolish +  LanguageQuechua + LanguageQuechuaAchuar + LanguageRussian + LanguageSpanish + LanguageSwedish + LanguageToposa + LanguageTsimane + LanguageUSEnglish + Environmentnaturalistic) / 30) > 0"
+
+AR_hyp <- "((Intercept*17 + LanguageBislama + LanguageBritishEnglish + LanguageCanadianEnglish +  LanguageCantoneseChinese + LanguageDanish + LanguageDutch + LanguageFrench + LanguageGerman + LanguageItalian + LanguageJapanese + LanguageKenyanFijian + LanguageKorean + LanguageMandarinChinese + LanguageSriLankanTamil + LanguageTagalog + LanguageUSEnglish) / 17) < 0"
+
+VD_hyp <- "((Intercept*11 + LanguageBritishEnglish + LanguageCanadianEnglish + LanguageDanish + LanguageJamaicanEnglish + LanguageJapanese + LanguageMandarinChinese + LanguageNorwegian + LanguageScottishEnglish + LanguageSwedish + LanguageUSEnglish) / 11) > 0"
+
+F0V_hyp <- "((Intercept*22 + LanguageBislama + LanguageBritishEnglish + LanguageCanadianEnglish + LanguageCantoneseChinese + LanguageDanish + LanguageDutch + LanguageFrench + LanguageGerman + LanguageHungarian + LanguageItalian + LanguageJapanese + LanguageKenyanFijian + LanguageKorean + LanguageMandarinChinese + LanguageNorwegian + LanguageScottishEnglish + LanguageSriLankanTamil + LanguageSwedish + LanguageTagalog + LanguageUSEnglish + Taskspontaneousspeech) / 22) > 0"
+
+
+# Combine into dataframe with the respective model name
+df_evidence <- data.frame(
+  best_model = c("F0_task_environment_language_age", 
+                  "VSA_environment",
+                  "AR_task",
+                  "VD_age_language",
+                  "F0V_task"),
+  hypo = c(F0_hyp, VSA_hyp, AR_hyp, VD_hyp, F0V_hyp)
+)
+
+# Create columns for model names
+df_evidence <- df_evidence |> 
+  mutate(
+    original_file = paste("~/ids-meta-replication/models/", best_model, "_report.rds", sep = ""),
+    replication_file = paste("~/ids-meta-replication/models/replication/", best_model,   "_report_rep.rds", sep = "")
+  )
+
+# obtain evidence ratios
+df_evidence <- df_evidence |> 
+  mutate(
+    original_evidence = map2_dbl(original_file, hypo, extract_evidence_ratio),
+    replication_evidence = map2_dbl(replication_file, hypo, extract_evidence_ratio)
+  )
+
+# Display results
+df_evidence |> 
+  select(best_model, original_evidence, replication_evidence) |> 
+  knitr::kable()
+
+```
+
 
 R2: Compare Best Models
 ---------------
+
+Model fit assessment was originally conducted via "loo". In the file `robustness_replication.qmd`, we reproduced the model weight calculation and additionally calculated other model weights. 
+
+First, we can check the model rank order in our replication of loo weights:
+```{r, eval = TRUE}
+# read in model weight results
+weights_list <- readRDS(here("output/replication/weights_list.RDS")) 
+
+# combine to df
+df_weights <- do.call(rbind, weights_list)
+
+# remove irrelevant string
+colnames(df_weights) <- gsub("AR_", "", colnames(df_weights))
+  
+df_weights <- df_weights |> 
+  as.data.frame() |> 
+  tibble::rownames_to_column(var = "weights") |> 
+  mutate(weights = gsub("weights_", "", weights))
+
+# only investigate loo weights here 
+df_weights |> 
+  filter(grepl("loo", weights)) |> 
+  pivot_longer(cols = !weights, names_to = "model") |> 
+  group_by(weights) |> 
+  mutate(model_rank = rank(-value)) |> 
+  mutate(value = round(value, 4)) |> 
+  View()
+
+```
+
+
 
 
 
@@ -4220,9 +4310,71 @@ R2: Compare Best Models
 R3: Check "Robust Predictors"
 ---------------
 
-TODO create a function that checks for CrI of individual models
+In general, it was unclear to us what the terminology of "robust" predictors refers to. Here, we first check the single-predictor models for each predictor and feature to check if the 95\%-CrI of the predictor excludes zero.
+```{r, eval=TRUE}
+predictors <- c("age", "language", "environment", "task")
+outcomes <- c("AR", "F0", "F0V", "VD", "VSA")
 
+df_robust <- expand.grid(predictors, outcomes) |> 
+  rename(
+    predictors = Var1,
+    outcomes = Var2
+  )
 
+# create file names
+df_robust <- df_robust |> 
+  mutate(filename = paste("~/ids-meta-replication/models/replication/", outcomes, "_", predictors, "_m_", "rep.rds", sep = ""))
+
+# read in each data set, then check if the 95% CI excludes 0
+check_ci <- function(filepath, ...){
+  fit <- readRDS(filepath)
+  sum_fit <- summary(fit)
+  
+  # check if CI of predictor excludes 0 
+  # (which requires the product of the bounds to be positive)
+  robust <- sum_fit$fixed$`l-95% CI`[[2]] * sum_fit$fixed$`u-95% CI`[[2]]
+  robust > 0
+}
+
+# apply the function to the dataframe
+df_robust_check <- df_robust |> 
+  mutate(robust_pred = map(filename, check_ci))
+
+# Prepare for plotting
+df_robust_check |> 
+  select(!filename) |> 
+  mutate(robust_pred = unlist(robust_pred)) |> 
+  pivot_wider(id_cols = outcomes, 
+              names_from = predictors,
+              values_from = robust_pred) |> 
+  knitr::kable()
+
+```
+
+This does not reproduce the original results.
+
+Alternatively, it might refer to the CrI of the predictor in the reported model, which we try now: 
+```{r, eval = TRUE}
+# F0: F0_task_environment_language_age_report
+F0_rep <- readRDS("~/ids-meta-replication/models/replication/F0_task_environment_language_age_report_rep.rds")
+
+summary_f0 <- summary(F0_rep)
+summary_f0$fixed |> 
+  knitr::kable()
+
+# VSA: VSA_environment_report
+VSA_rep <- readRDS("~/ids-meta-replication/models/replication/VSA_environment_report_rep.rds")
+
+summary_VSA <- summary(VSA_rep)
+summary_VSA$fixed |> 
+  knitr::kable()
+# AR: AR_task_report
+# VD: VD_age_language_report
+# F0V_task_report
+
+```
+
+This does not seem to be the case as well, so we stop after these two models. Alternatively, "robust" predictors might somehow be based on the evidence ratios, but this is also not clearly indicated in the manuscript.
 
 
 # Session Info

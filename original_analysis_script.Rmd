@@ -1,0 +1,4102 @@
+---
+title: "Analysis Code for *A Bayesian Meta-Analysis of the Acoustic Properties of Infant-Directed Speech* "
+author: "Chris Cox (chris.mm.cox@gmail.com)"
+date: "08/08/2022"
+output:
+  pdf_document:
+    toc: true
+    latex_engine: xelatex
+  html_document: default
+editor_options:
+  chunk_output_type: console
+geometry: margin=0.8cm
+---
+
+```{r setup, include=FALSE}
+pacman::p_load(
+  #general
+  Rcpp,
+  ggplot2,
+  tidybayes,
+  tidyverse,
+  readxl,
+  here,
+  dplyr,
+  moments,
+  glue,
+  tidybayes,
+  Counterfactual,
+  clickR,
+  job,
+  #metaanalysis
+  metafor,
+  robumeta,
+  esc,
+  effectsize,
+  PublicationBias,
+  #visualization
+  ggplot2,
+  ggridges,
+  lattice,
+  cowplot,
+  RColorBrewer,
+  forcats,
+  ggalluvial,
+  knitr,
+  osfr,
+  #modelfitting
+  brms,
+  boot,
+  lme4,
+  mice,
+  loo)
+```
+
+```{r, include=FALSE}
+opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE, fig.width=12, fig.height=10, fig.fullwidth=TRUE)
+```
+
+\newpage
+Folder & Data Setup
+---------------
+
+```{r, eval = FALSE}
+#Use this chunk to set up the data and folder structure.
+#If you are running the code on a computer with a Linux operating system, you can download the compiled 
+#models from OSF. If not, a "models" folder will be made to make sure that the code can run on your computer:
+if (Sys.info()['sysname'] == "Linux") {
+  project_files <- osf_retrieve_node("https://osf.io/hc7me/") #Note that this requires about 12 GB
+  project_models_list <- osf_ls_files(project_files)
+  
+  dir.create("models")
+  osf_download(osf_ls_files(project_models_list[2, ]), path = "models", verbose = TRUE) #the models have to be downloaded in separate folders from OSF
+  osf_download(osf_ls_files(project_models_list[6, ]), path = "models", verbose = TRUE)
+  osf_download(osf_ls_files(project_models_list[5, ]), path = "models", verbose = TRUE)
+  osf_download(osf_ls_files(project_models_list[3, ]), path = "models", verbose = TRUE)
+} else {
+ dir.create("models")
+}
+
+#The following code downloads the data and robustness checks data:
+project_data_list <- osf_ls_files(project_models_list[8,])
+osf_download(project_data_list)
+
+robustness_data_list <- osf_ls_files(project_files)
+osf_download(robustness_data_list[4, ])
+
+#number of cores available to run the models
+cores <- parallel::detectCores()
+```
+
+In the below script, I use the following abbreviations: 
+      F0 = Fundamental Frequency, 
+      VSA = Vowel Space Area, 
+      AR = Articulation Rate, 
+      VD = Vowel Duration, & 
+      F0V = F0 Variability.
+
+1: Intercepts-Only Models
+---------------
+
+Let's start with an intercepts-only model of F0, with nested effects:
+
+```{r}
+data_F0_multiple_final <- readRDS("data_F0_multiple_final.RData")
+data_F0_final <- readRDS("data_F0_final.RData")
+
+baseline_z <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + (1 | Language/id_site/measurement_num))
+
+priors <- c(prior(normal(0, 2.5), class = Intercept),
+            prior(normal(1, 1), class = sd),
+            prior(gamma(2, 0.1), class = nu))
+
+F0_intercept_m <- 
+  brm_multiple(
+    baseline_z,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0_multiple_final, 
+    family = student,
+    prior = priors,
+    file = here("models","F0_intercept_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.999,
+      max_treedepth = 20 ))
+
+pp_check(F0_intercept_m, ndraws = 100)
+summary(F0_intercept_m)
+```
+
+```{r, fig.width=12, fig.height=15}
+#extract data from the intercepts-only model:
+study.draws <- spread_rvars(F0_intercept_m, `r_Language:id_site`[`r_Language`, ], b_Intercept) %>%
+  mutate(b_Intercept = `r_Language:id_site` + b_Intercept) %>%
+  mutate(r_Language = paste0(sapply(strsplit(as.character(r_Language), "[()]"), `[`,2),
+                             "_",
+                             sapply(strsplit(as.character(r_Language), "[()]"), `[`,3))) %>%
+  mutate(r_Language = as.factor(r_Language)) %>%
+  select(r_Language, b_Intercept)
+
+pooled.effect.draws <- spread_rvars(F0_intercept_m, b_Intercept) %>%
+  mutate(r_Language = "Pooled Effect") %>%
+  mutate(r_Language = as.factor(r_Language)) %>%
+  select(r_Language, b_Intercept)
+
+forest.data <- rbind(study.draws, pooled.effect.draws) %>%
+  ungroup() %>%
+  mutate(r_Language = reorder(r_Language, b_Intercept))
+
+forest.data.summary <- group_by(forest.data, r_Language) %>%
+  mean_qi(b_Intercept)
+
+#plot the results:
+forest_plot_F0 <- ggplot(aes(dist = b_Intercept, y = relevel(r_Language, "Pooled Effect", after = Inf)), 
+                         data = forest.data) +
+  stat_dist_halfeye(fill = "steelblue", scale = 0.7, alpha = 0.8, size = 0.8, show_point = T) +
+  geom_vline(xintercept = 0.0, color = "black", size = 0.3, linetype="dotted") +
+  geom_text(data = mutate_if(forest.data.summary, is.numeric, round, 2), aes(label = glue("{b_Intercept} [{.lower}, {.upper}]"), x = Inf), hjust = "inward", size = 3) +
+  labs(x = "placeholder", y = element_blank()) +
+  scale_x_continuous("Effect Size (Hedges' g)", limits = c(-1, 6), breaks = c(0, 1, 2, 3, 4, 5)) +
+  ggtitle(expression(paste("Forest Plot for Studies on ", italic(f)[o]))) +
+  theme_bw()
+forest_plot_F0 <- forest_plot_F0 + theme(plot.title = element_text(hjust = 0.5, size=15))
+forest_plot_F0
+```
+
+Let's next build an intercepts-only model of VSA, with nested effects:
+
+```{r}
+data_VSA_multiple_final <- readRDS("data_VSA_multiple_final.RData")
+data_VSA_final <- readRDS("data_VSA_final.RData")
+
+VSA_intercept_m <- 
+  brm_multiple(
+    baseline_z,
+    save_pars = save_pars(all = TRUE),
+    data = data_VSA_multiple_final, 
+    family = student,
+    prior = priors,
+    file = here("models", "VSA_intercept_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.999,
+      max_treedepth = 20 ))
+
+pp_check(VSA_intercept_m, ndraws = 100)
+summary(VSA_intercept_m)
+
+```
+
+```{r, fig.width=12, fig.height=15}
+#extract data from the baseline model:
+study.draws <- spread_rvars(VSA_intercept_m, `r_Language:id_site`[`r_Language`, ], b_Intercept) %>%
+  mutate(b_Intercept = `r_Language:id_site` + b_Intercept) %>%
+  mutate(r_Language = paste0(sapply(strsplit(as.character(r_Language), "[()]"), `[`,2),
+                             "_",
+                             sapply(strsplit(as.character(r_Language), "[()]"), `[`,3))) %>%
+  mutate(r_Language = as.factor(r_Language)) %>%
+  select(r_Language, b_Intercept)
+
+pooled.effect.draws <- spread_rvars(VSA_intercept_m, b_Intercept) %>%
+  mutate(r_Language = "Pooled Effect") %>%
+  mutate(r_Language = as.factor(r_Language)) %>%
+  select(r_Language, b_Intercept)
+
+forest.data <- rbind(study.draws, pooled.effect.draws) %>%
+  ungroup() %>%
+  mutate(r_Language = reorder(r_Language, b_Intercept))
+
+forest.data.summary <- group_by(forest.data, r_Language) %>%
+  mean_qi(b_Intercept)
+
+#plot the results:
+forest_plot_VSA <- ggplot(aes(dist = b_Intercept, y = relevel(r_Language, "Pooled Effect", after = Inf)), data = forest.data) +
+  stat_dist_halfeye(fill = "steelblue", scale = 0.7, alpha = 0.8, size = 0.8, show_point = F) +
+  geom_point(data=forest.data.summary, color='black', shape=18, size=2, aes(x = b_Intercept, y = r_Language)) +
+  geom_vline(xintercept = 0, color = "black", size = 0.3, linetype="dotted") +
+  geom_text(data = mutate_if(forest.data.summary, is.numeric, round, 2), aes(label = glue("{b_Intercept} [{.lower}, {.upper}]"), x = Inf), hjust = "inward", size = 3) +
+  labs(x = "placeholder", y = element_blank()) +
+  scale_x_continuous("Effect Size (Hedges' g)", limits = c(-1.5, 4), breaks = c(0, 1, 2, 3, 4, 5)) +
+  ggtitle("Forest Plot for Studies on Vowel Space Area") +
+  theme_bw()
+forest_plot_VSA <- forest_plot_VSA + theme(plot.title = element_text(hjust = 0.5, size=15))
+forest_plot_VSA
+```
+
+
+Let's next build an intercepts-only model of AR, with nested effects:
+
+```{r}
+data_AR_multiple_final <- readRDS("data_AR_multiple_final.RData")
+data_AR_final <- readRDS("data_AR_final.RData")
+
+AR_intercept_m <- 
+  brm_multiple(
+    baseline_z,
+    save_pars = save_pars(all = TRUE),
+    data = data_AR_multiple_final, 
+    family = student,
+    prior = priors,
+    file = here("models", "AR_intercept_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+pp_check(AR_intercept_m, ndraws = 100)
+summary(AR_intercept_m)
+
+```
+
+```{r, fig.width=12, fig.height=15}
+#extract data from the baseline model:
+study.draws <- spread_rvars(AR_intercept_m, `r_Language:id_site`[`r_Language`, ], b_Intercept) %>%
+  mutate(b_Intercept = `r_Language:id_site` + b_Intercept) %>%
+  mutate(r_Language = paste0(sapply(strsplit(as.character(r_Language), "[()]"), `[`,2),
+                             "_",
+                             sapply(strsplit(as.character(r_Language), "[()]"), `[`,3))) %>%
+  mutate(r_Language = as.factor(r_Language)) %>%
+  select(r_Language, b_Intercept)
+
+pooled.effect.draws <- spread_rvars(AR_intercept_m, b_Intercept) %>%
+  mutate(r_Language = "Pooled Effect") %>%
+  mutate(r_Language = as.factor(r_Language)) %>%
+  select(r_Language, b_Intercept)
+
+forest.data <- rbind(study.draws, pooled.effect.draws) %>%
+  ungroup() %>%
+  mutate(r_Language = reorder(r_Language, b_Intercept))
+
+forest.data.summary <- group_by(forest.data, r_Language) %>%
+  mean_qi(b_Intercept)
+
+#plot the results:
+forest_plot_AR <- ggplot(aes(dist = b_Intercept, y = relevel(r_Language, "Pooled Effect", after = Inf)), data = forest.data) +
+  stat_dist_halfeye(fill = "steelblue", scale = 0.7, alpha = 0.8, size = 0.8, show_point = T) +
+  geom_vline(xintercept = 0, color = "black", size = 0.3, linetype="dotted") +
+  geom_text(data = mutate_if(forest.data.summary, is.numeric, round, 2), aes(label = glue("{b_Intercept} [{.lower}, {.upper}]"), x = Inf), hjust = "inward", size = 3) +
+  labs(x = "placeholder", y = element_blank()) +
+  scale_x_continuous("Effect Size (Hedges' g)", limits = c(-4.5, 2.2), breaks = c(-3, -2, -1, 0, 1, 2)) +
+  ggtitle("Forest Plot for Studies on Articulation Rate") +
+  theme_bw()
+forest_plot_AR <- forest_plot_AR + theme(plot.title = element_text(hjust = 0.5, size=15))
+forest_plot_AR
+```
+
+Let's next build an intercepts-only model of VD, with nested effects:
+
+```{r}
+data_VD_multiple_final <- readRDS("data_VD_multiple_final.RData")
+data_VD_final <- readRDS("data_VD_final.RData")
+
+VD_intercept_m <- 
+  brm_multiple(
+    baseline_z,
+    save_pars = save_pars(all = TRUE),
+    data = data_VD_multiple_final, 
+    family = student,
+    prior = priors,
+    file = here("models", "VD_intercept_m"),
+    sample_prior = T,
+    iter = 10000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.999,
+      max_treedepth = 20 ))
+
+pp_check(VD_intercept_m, ndraws = 100)
+summary(VD_intercept_m)
+```
+
+```{r, fig.width=12, fig.height=15}
+#extract data from the baseline model:
+study.draws <- spread_rvars(VD_intercept_m, `r_Language:id_site`[`r_Language`, ], b_Intercept) %>%
+  mutate(b_Intercept = `r_Language:id_site` + b_Intercept) %>%
+  mutate(r_Language = paste0(sapply(strsplit(as.character(r_Language), "[()]"), `[`,2),
+                             "_",
+                             sapply(strsplit(as.character(r_Language), "[()]"), `[`,3))) %>%
+  mutate(r_Language = as.factor(r_Language)) %>%
+  select(r_Language, b_Intercept)
+
+pooled.effect.draws <- spread_rvars(VD_intercept_m, b_Intercept) %>%
+  mutate(r_Language = "Pooled Effect") %>%
+  mutate(r_Language = as.factor(r_Language)) %>%
+  select(r_Language, b_Intercept)
+
+forest.data <- rbind(study.draws, pooled.effect.draws) %>%
+  ungroup() %>%
+  mutate(r_Language = reorder(r_Language, b_Intercept))
+
+forest.data.summary <- group_by(forest.data, r_Language) %>%
+  mean_qi(b_Intercept)
+
+#plot the results:
+forest_plot_VD <- ggplot(aes(dist = b_Intercept, y = relevel(r_Language, "Pooled Effect", after = Inf)), data = forest.data) +
+  stat_dist_halfeye(fill = "steelblue", scale = 0.7, alpha = 0.8, size = 0.8, show_point = T) +
+  geom_vline(xintercept = 0, color = "black", size = 0.3, linetype="dotted") +
+  geom_text(data = mutate_if(forest.data.summary, is.numeric, round, 2), aes(label = glue("{b_Intercept} [{.lower}, {.upper}]"), x = Inf), hjust = "inward", size = 3) +
+  labs(x = "placeholder", y = element_blank()) +
+  scale_x_continuous("Effect Size (Hedges' g)", limits = c(-1, 3.4), breaks = c(-1, 0, 1, 2, 3)) +
+  ggtitle("Forest Plot for Studies on Vowel Duration") +
+  theme_bw()
+forest_plot_VD <- forest_plot_VD + theme(plot.title = element_text(hjust = 0.5, size=15))
+forest_plot_VD
+```
+
+Let's next build an intercepts-only model of F0V, with nested effects:
+
+```{r}
+data_F0V_multiple_final <- readRDS("data_F0V_multiple_final.RData")
+data_F0V_final <- readRDS("data_F0V_final.RData")
+
+F0V_intercept_m <- 
+  brm_multiple(
+    baseline_z,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0V_multiple_final, 
+    family = student,
+    prior = priors,
+    file = here("models", "F0V_intercept_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.999,
+      max_treedepth = 20 ))
+
+pp_check(F0V_intercept_m, ndraws = 100)
+summary(F0V_intercept_m)
+```
+
+```{r, fig.width=12, fig.height=15}
+#extract data from the baseline model:
+study.draws <- spread_rvars(F0V_intercept_m, `r_Language:id_site`[`r_Language`, ], b_Intercept) %>%
+  mutate(b_Intercept = `r_Language:id_site` + b_Intercept) %>%
+  mutate(r_Language = paste0(sapply(strsplit(as.character(r_Language), "[()]"), `[`,2),
+                             "_",
+                             sapply(strsplit(as.character(r_Language), "[()]"), `[`,3))) %>%
+  mutate(r_Language = as.factor(r_Language)) %>%
+  select(r_Language, b_Intercept)
+
+pooled.effect.draws <- spread_rvars(F0V_intercept_m, b_Intercept) %>%
+  mutate(r_Language = "Pooled Effect") %>%
+  mutate(r_Language = as.factor(r_Language)) %>%
+  select(r_Language, b_Intercept)
+
+forest.data <- rbind(study.draws, pooled.effect.draws) %>%
+  ungroup() %>%
+  mutate(r_Language = reorder(r_Language, b_Intercept))
+
+forest.data.summary <- group_by(forest.data, r_Language) %>%
+  mean_qi(b_Intercept)
+
+#plot the results:
+forest_plot_F0V <- ggplot(aes(dist = b_Intercept, y = relevel(r_Language, "Pooled Effect", after = Inf)), data = forest.data) +
+  stat_dist_halfeye(fill = "steelblue", scale = 0.7, alpha = 0.8, size = 0.8, show_point = T) +
+  geom_vline(xintercept = 0, color = "black", size = 0.3, linetype="dotted") +
+  geom_text(data = mutate_if(forest.data.summary, is.numeric, round, 2), aes(label = glue("{b_Intercept} [{.lower}, {.upper}]"), x = Inf), hjust = "inward", size = 3) +
+  labs(x = "placeholder", y = element_blank()) +
+  scale_x_continuous("Effect Size (Hedges' g)", limits = c(-1.9, 5.2), breaks = c(-2, -1, 0, 1, 2, 3, 4, 5)) +
+  ggtitle(expression(paste("Forest Plot for Studies on ", italic(f)[o], " Variability"))) +
+  theme_bw()
+forest_plot_F0V <- forest_plot_F0V + theme(plot.title = element_text(hjust = 0.5, size=15))
+forest_plot_F0V
+```
+
+
+2: Task, Environment, Age, Language as Predictors
+---------------
+
+It's time to build the full models:
+
+```{r}
+baseline_te <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Age_months + 
+                    Language + Environment + Task + (1 | Language/id_site/measurement_num))
+
+priors1 <- c(prior(normal(0, 2.5), class = Intercept),
+             prior(normal(1, 1), class = sd),
+             prior(normal(0, 1), class = b),
+             prior(normal(0, 0.05), class = b, coef = "Age_months"),
+             prior(gamma(2, 0.1), class = nu))
+
+F0_task_environment_language_age_m <- 
+  brm_multiple(
+    baseline_te,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "F0_task_environment_language_age_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.999,
+      max_treedepth = 20 ))
+
+summary(F0_task_environment_language_age_m)
+pp_check(F0_task_environment_language_age_m, ndraws = 100)
+```
+
+```{r}
+#Plot estimates according to language:
+c_eff <- conditional_effects(F0_task_environment_language_age_m)
+F0_age_language_model_data <- c_eff$Language
+
+#use only the raw data that were included in the model (and not excluded due to age not being there):
+data_F0_plot <- data_F0_final %>%
+  filter(Age_months > 0)
+
+F0_age_language_model_data$Language <- reorder(F0_age_language_model_data$Language, F0_age_language_model_data$estimate__)
+data_F0_plot$Language_order <- match(data_F0_plot$Language, F0_age_language_model_data$Language)
+data_F0_plot$Language <- as.factor(reorder(data_F0_plot$Language, data_F0_plot$Language_order))
+
+c_eff_plot_language_F0 <- ggplot() +
+  geom_vline(xintercept = 0, color = "black", size = 0.3, linetype="dotted") +
+  geom_point(aes(y = Language, x = estimate__), data = F0_age_language_model_data, color = "black", fill = "black", size = 4, alpha = 1, stroke = 0.5) +
+  geom_point(aes(y = Language, x = estimate__), data = F0_age_language_model_data, color = "#FC4E07", fill = "black", size = 3, alpha = 0.9, stroke = 0.5) +
+  geom_errorbar(aes(y = effect1__, xmin = lower__, xmax = upper__), data = F0_age_language_model_data, color = "steelblue") +
+  scale_x_continuous(breaks=c(-2, -1, 0, 1, 2, 3, 4, 5, 6)) +
+  scale_colour_manual(labels = c('Language'), values = c("#FC4E07")) +
+  geom_point(aes(y = Language, x = Effect_Size, size = 1/ Effect_Size_se), data = data_F0_plot, color = "black", alpha = 0.1, 
+             position = position_jitter(width = 0, height = 0.2), shape = 21, stroke = 1.1, fill = "grey40") +
+  xlab("Effect Size (Hedges' g)") +
+  ylab("Language") +
+  ggtitle(expression(paste(italic(f)[o], " as a Function of Language"))) +
+  theme_bw()
+c_eff_plot_language_F0 <- c_eff_plot_language_F0 + theme(plot.title = element_text(hjust = 0.5, size=15),
+                                                         legend.position = "none")
+c_eff_plot_language_F0
+
+#Plot estimates according to age:
+c_eff_F0 <- conditional_effects(F0_task_environment_language_age_m, effects = 'Age_months', spaghetti = T, ndraws = 100)
+c_eff_plot_age_F0 <- plot(c_eff_F0,
+                          mean = FALSE, 
+                          points = F, 
+                          point_args = c(alpha = 0.3, size = 2, show.legend = FALSE, width = 0.4), 
+                          spaghetti_args = c(alpha = 1, size = 0.4), 
+                          plot = FALSE)[[1]]
+c_eff_plot_age_F0 <- c_eff_plot_age_F0 +
+  geom_hline(aes(yintercept = 0), color = "black", size = 0.3, linetype="dotted") +
+  scale_y_continuous(breaks=c(-2, -1, 0, 1, 2, 3, 4, 5, 6)) +
+  geom_point(aes(y = Effect_Size, x = Age_months, size = 1/ Effect_Size_se), data = data_F0_final, color = "black", alpha = 0.1, 
+             shape = 21, stroke = 1.1, fill = "grey40") +
+  xlab("Mean Age in Months") +
+  ylab("Effect Size (Hedges' g)") +
+  ggtitle(expression(paste(italic(f)[o], " as a Function of Age"))) +
+  geom_line(color = "#FC4E07", size = 1) +
+  guides(color = guide_legend(override.aes = list(alpha = 0.5, size = 1))) +
+  scale_x_continuous(limits = c(0, 37), breaks=c(0, 5, 10, 15, 20, 25, 30, 35)) +
+  theme_bw()
+
+c_eff_plot_age_F0 <- c_eff_plot_age_F0 + theme(plot.title = element_text(hjust = 0.5, size=15),
+                                               legend.position = "none")
+c_eff_plot_age_F0
+
+#Plots of Task and Environment:
+c_eff <- conditional_effects(F0_task_environment_language_age_m)
+data_F0_plot_task <- c_eff$Task
+
+c_eff_plot_task_F0 <- ggplot() +
+  geom_errorbar(aes(y = effect1__, xmin = lower__, xmax = upper__), data = data_F0_plot_task, color = "steelblue", width = 0.62, size = 1.5) +
+  geom_point(aes(y = Task, x = Effect_Size, size = 1/ Effect_Size_se), data = data_F0_final, color = "black", alpha = 0.1,
+             position = position_jitter(width = 0, height = 0.3), shape = 21, stroke = 1.1, fill = "grey40") +
+  geom_point(aes(y = effect1__, x = estimate__), data = data_F0_plot_task, color = "black", fill = "black", size = 4, alpha = 1, stroke = 0.5) +
+  geom_point(aes(y = effect1__, x = estimate__), data = data_F0_plot_task, color = "#FC4E07", fill = "black", size = 3, alpha = 0.9, stroke = 0.5) +
+  scale_x_continuous(breaks=c(-2, -1, 0, 1, 2, 3, 4, 5, 6)) +
+  scale_colour_manual(labels = c('Language'), values = c("#FC4E07")) +
+  xlab("Effect Size (Hedges' g)") +
+  ylab("Task") +
+  ggtitle(expression(paste(italic(f)[o], " as a Function of Task"))) +
+  geom_vline(aes(xintercept = 0), color = "black", size = 0.3, linetype="dotted") +
+  coord_flip() +
+  theme_bw()
+c_eff_plot_task_F0 <- c_eff_plot_task_F0 + theme(plot.title = element_text(hjust = 0.5, size=15),
+                                                 legend.position = "none")
+c_eff_plot_task_F0
+
+#Plot for environment:
+data_F0_plot_environment <- c_eff$Environment
+
+c_eff_plot_environment_F0 <- ggplot() +
+  geom_errorbar(aes(y = effect1__, xmin = lower__, xmax = upper__), data = data_F0_plot_environment, color = "steelblue", width = 0.62, size = 1.5) +
+  geom_point(aes(y = Environment, x = Effect_Size, size = 1/ Effect_Size_se), data = data_F0_final, color = "black", alpha = 0.1,
+             position = position_jitter(width = 0, height = 0.3), shape = 21, stroke = 1.1, fill = "grey40") +
+  geom_point(aes(y = effect1__, x = estimate__), data = data_F0_plot_environment, color = "black", fill = "black", size = 4, alpha = 1, stroke = 0.5) +
+  geom_point(aes(y = effect1__, x = estimate__), data = data_F0_plot_environment, color = "#FC4E07", fill = "black", size = 3, alpha = 0.9, stroke = 0.5) +
+  scale_x_continuous(breaks=c(-2, -1, 0, 1, 2, 3, 4, 5, 6)) +
+  scale_colour_manual(labels = c('Language'), values = c("#FC4E07")) +
+  xlab("Effect Size (Hedges' g)") +
+  ylab("Environment") +
+  ggtitle(expression(paste(italic(f)[o], " as a Function of Environment"))) +
+  geom_vline(aes(xintercept = 0), color = "black", size = 0.3, linetype="dotted") +
+  coord_flip() +
+  theme_bw()
+c_eff_plot_environment_F0 <- c_eff_plot_environment_F0 + theme(plot.title = element_text(hjust = 0.5, size=15),
+                                                               legend.position = "none")
+c_eff_plot_environment_F0
+```
+
+```{r}
+#same for VSA:
+VSA_task_environment_language_age_m <- 
+  brm_multiple(
+    baseline_te,
+    save_pars = save_pars(all = TRUE),
+    data = data_VSA_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models","VSA_task_environment_language_age_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.999,
+      max_treedepth = 20 ))
+
+summary(VSA_task_environment_language_age_m)
+pp_check(VSA_task_environment_language_age_m, ndraws = 100)
+```
+
+```{r}
+#Plots of Task and Environment:
+#Plot estimates according to language:
+c_eff <- conditional_effects(VSA_task_environment_language_age_m)
+VSA_age_language_model_data <- c_eff$Language
+
+data_VSA_plot <- data_VSA_final %>%
+  filter(Age_months > 0)
+
+VSA_age_language_model_data$Language <- reorder(VSA_age_language_model_data$Language, VSA_age_language_model_data$estimate__)
+data_VSA_plot$Language_order <- match(data_VSA_plot$Language, VSA_age_language_model_data$Language)
+data_VSA_plot$Language <- as.factor(reorder(data_VSA_plot$Language, data_VSA_plot$Language_order))
+
+c_eff_plot_language_VSA <- ggplot() +
+  geom_vline(aes(xintercept = 0), color = "black", size = 0.3, linetype="dotted") +
+  geom_point(aes(y = reorder(effect1__, estimate__), x = estimate__), data = VSA_age_language_model_data, color = "black", fill = "black", size = 4, alpha = 1, stroke = 0.5) +
+  geom_point(aes(y = effect1__, x = estimate__), data = VSA_age_language_model_data, color = "#FC4E07", fill = "black", size = 3, alpha = 0.9, stroke = 0.5) +
+  geom_errorbar(aes(y = effect1__, xmin = lower__, xmax = upper__), data = VSA_age_language_model_data, color = "steelblue") +
+  geom_point(aes(y = Language, x = Effect_Size, size = 1/ Effect_Size_se), data = data_VSA_plot, color = "black", alpha = 0.1, 
+             position = position_jitter(width = 0, height = 0.2), shape = 21, stroke = 1.1, fill = "grey40") +
+  scale_x_continuous(breaks=c(-2, -1, 0, 1, 2, 3, 4, 5, 6)) +
+  scale_colour_manual(labels = c('Language'), values = c("#FC4E07")) +
+  xlab("Effect Size (Hedges' g)") +
+  ylab("Language") +
+  ggtitle('Vowel Space Area as a Function of Language') +
+  theme_bw()
+c_eff_plot_language_VSA <- c_eff_plot_language_VSA + 
+  theme(plot.title = element_text(hjust = 0.5, size=15), 
+        legend.position = "none")
+c_eff_plot_language_VSA
+
+#Plot estimates according to age:
+c_eff <- conditional_effects(VSA_task_environment_language_age_m, effects = 'Age_months', spaghetti = T, ndraws = 150, points = T)
+c_eff_plot_age_VSA <- plot(c_eff,
+                           mean = FALSE, 
+                           points = F, 
+                           point_args = c(alpha = 0.8, size = 2, show.legend = FALSE, width = 0.3), 
+                           spaghetti_args = c(alpha = 1, size = 0.4), 
+                           plot = FALSE)[[1]]
+c_eff_plot_age_VSA <- c_eff_plot_age_VSA +
+  scale_y_continuous(breaks=c(-2, -1, 0, 1, 2, 3, 4, 5, 6)) +
+  geom_point(aes(y = Effect_Size, x = Age_months, size = 1/ Effect_Size_se), data = data_VSA_final, color = "black", alpha = 0.1, 
+             shape = 21, stroke = 1.1, fill = "grey40") +
+  xlab("Mean Age in Months") +
+  ylab("Effect Size (Hedges' g)") +
+  ggtitle('Vowel Space Area as a Function of Age') +
+  geom_hline(aes(yintercept = 0), color = "black", size = 0.3, linetype="dotted") +
+  geom_line(color = "#FC4E07") +
+  guides(color = guide_legend(override.aes = list(alpha = 0.5, size = 1))) +
+  scale_x_continuous(breaks=c(0, 5, 10, 15, 20, 25, 30, 35, 40)) +
+  theme_bw()
+
+c_eff_plot_age_VSA <- c_eff_plot_age_VSA + theme(plot.title = element_text(hjust = 0.5, size=15),
+                                                 legend.position = "none")
+c_eff_plot_age_VSA
+
+#Same for Task:
+c_eff <- conditional_effects(VSA_task_environment_language_age_m)
+data_VSA_plot_task <- c_eff$Task
+
+c_eff_plot_task_VSA <- ggplot() +
+  geom_errorbar(aes(y = effect1__, xmin = lower__, xmax = upper__), data = data_VSA_plot_task, color = "steelblue", width = 0.62, size = 1.5) +
+  geom_point(aes(y = Task, x = Effect_Size, size = 1/ Effect_Size_se), data = data_VSA_final, color = "black", alpha = 0.1,
+             position = position_jitter(width = 0, height = 0.3), shape = 21, stroke = 1.1, fill = "grey40") +
+  geom_point(aes(y = effect1__, x = estimate__), data = data_VSA_plot_task, color = "black", fill = "black", size = 4, alpha = 1, stroke = 0.5) +
+  geom_point(aes(y = effect1__, x = estimate__), data = data_VSA_plot_task, color = "#FC4E07", fill = "black", size = 3, alpha = 0.9, stroke = 0.5) +
+  scale_x_continuous(breaks=c(-2, -1, 0, 1, 2, 3, 4, 5, 6)) +
+  scale_colour_manual(labels = c('Language'), values = c("#FC4E07")) +
+  geom_vline(aes(xintercept = 0), color = "black", size = 0.3, linetype="dotted") +
+  xlab("Effect Size (Hedges' g)") +
+  ylab("Task") +
+  ggtitle('Vowel Space Area as a Function of Task') +
+  coord_flip() +
+  theme_bw()
+c_eff_plot_task_VSA <- c_eff_plot_task_VSA + theme(plot.title = element_text(hjust = 0.5, size=15),
+                                                   legend.position = "none")
+c_eff_plot_task_VSA
+
+#Plot for environment:
+data_VSA_plot_environment <- c_eff$Environment
+
+c_eff_plot_environment_VSA <- ggplot() +
+  geom_errorbar(aes(y = effect1__, xmin = lower__, xmax = upper__), data = data_VSA_plot_environment, color = "steelblue", width = 0.62, size = 1.5) +
+  geom_point(aes(y = Environment, x = Effect_Size, size = 1/ Effect_Size_se), data = data_VSA_final, color = "black", alpha = 0.1,
+             position = position_jitter(width = 0, height = 0.3), shape = 21, stroke = 1.1, fill = "grey40") +
+  geom_point(aes(y = effect1__, x = estimate__), data = data_VSA_plot_environment, color = "black", fill = "black", size = 4, alpha = 1, stroke = 0.5) +
+  geom_point(aes(y = effect1__, x = estimate__), data = data_VSA_plot_environment, color = "#FC4E07", fill = "black", size = 3, alpha = 0.9, stroke = 0.5) +
+  scale_x_continuous(breaks=c(-2, -1, 0, 1, 2, 3, 4, 5, 6)) +
+  scale_colour_manual(labels = c('Language'), values = c("#FC4E07")) +
+  geom_vline(aes(xintercept = 0), color = "black", size = 0.3, linetype="dotted") +
+  xlab("Effect Size (Hedges' g)") +
+  ylab("Environment") +
+  ggtitle('Vowel Space Area as a Function of Environment') +
+  coord_flip() +
+  theme_bw()
+c_eff_plot_environment_VSA <- c_eff_plot_environment_VSA + theme(plot.title = element_text(hjust = 0.5, size=15),
+                                                                 legend.position = "none")
+c_eff_plot_environment_VSA
+```
+
+```{r}
+#same for AR:
+AR_task_environment_language_age_m <- 
+  brm_multiple(
+    baseline_e,
+    save_pars = save_pars(all = TRUE),
+    data = data_AR_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "AR_environment_language_age_m"),
+    sample_prior = T,
+    iter = 10000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.999,
+      max_treedepth = 20 ))
+
+summary(AR_task_environment_language_age_m)
+pp_check(AR_task_environment_language_age_m, ndraws = 100)
+```
+
+```{r}
+#Plot estimates according to Language:
+c_eff <- conditional_effects(AR_task_environment_language_age_m)
+AR_age_language_model_data <- c_eff$Language
+
+c_eff_plot_language_AR <- ggplot() +
+  geom_point(aes(y = reorder(effect1__, estimate__), x = estimate__), data = AR_age_language_model_data, color = "black", fill = "black", size = 4, alpha = 1, stroke = 0.5) +
+  geom_point(aes(y = effect1__, x = estimate__), data = AR_age_language_model_data, color = "#FC4E07", fill = "black", size = 3, alpha = 0.9, stroke = 0.5) +
+  geom_errorbar(aes(y = effect1__, xmin = lower__, xmax = upper__), data = AR_age_language_model_data, color = "steelblue") +
+  #geom_jitter(aes(y = Language, x = Effect_Size), height = 0.1, data = data_AR_final, color = "grey40", size = 1.5, alpha = 0.8) +
+  geom_point(aes(y = Language, x = Effect_Size, size = 1/ Effect_Size_se), data = data_AR_final, color = "black", alpha = 0.1, 
+             position = position_jitter(width = 0, height = 0.2), shape = 21, stroke = 1.1, fill = "grey40") +
+  scale_x_continuous(breaks=c(-5, -4, -3, -2, -1, 0, 1)) +
+  scale_colour_manual(labels = c('Language'), values = c("#FC4E07")) +
+  geom_vline(aes(xintercept = 0), color = "black", size = 0.3, linetype="dotted") +
+  xlab("Effect Size (Hedges' g)") +
+  ylab("Language") +
+  ggtitle('Articulation Rate as a Function of Language') +
+  theme_bw()
+c_eff_plot_language_AR <- c_eff_plot_language_AR + theme(plot.title = element_text(hjust = 0.5, size=15),
+                                                         legend.position = "none")
+c_eff_plot_language_AR
+
+#Plot estimates according to Age: 
+c_eff <- conditional_effects(AR_task_environment_language_age_m, effects = 'Age_months', spaghetti = T, ndraws = 100)
+c_eff_plot_age_AR <- plot(c_eff,
+                          mean = FALSE, 
+                          points = F, 
+                          point_args = c(alpha = 0.8, size = 2, show.legend = FALSE, width = 0.3), 
+                          spaghetti_args = c(alpha = 1, size = 0.4), 
+                          plot = FALSE)[[1]]
+c_eff_plot_age_AR <- c_eff_plot_age_AR +
+  geom_point(aes(y = Effect_Size, x = Age_months, size = 1/ Effect_Size_se), data = data_AR_final, color = "black", alpha = 0.1, 
+             shape = 21, stroke = 1.1, fill = "grey40") +
+  xlab("Mean Age in Months") +
+  ylab("Effect Size (Hedges' g)") +
+  ggtitle('Articulation Rate as a Function of Age') +
+  geom_line(color = "#FC4E07") +
+  geom_hline(aes(yintercept = 0), color = "black", size = 0.3, linetype="dotted") +
+  guides(color = guide_legend(override.aes = list(alpha = 0.5, size = 1))) +
+  theme_bw()
+
+c_eff_plot_age_AR <- c_eff_plot_age_AR + theme(plot.title = element_text(hjust = 0.5, size=15),
+                                               legend.position = "none")
+c_eff_plot_age_AR
+
+#Plots of Task and Environment:
+AR_task_environment_language_age_m <- readRDS('models/AR_task_environment_language_age_m.rds')
+c_eff <- conditional_effects(AR_task_environment_language_age_m)
+data_AR_plot_task <- c_eff$Task
+
+c_eff_plot_task_AR <- ggplot() +
+  geom_errorbar(aes(y = effect1__, xmin = lower__, xmax = upper__), data = data_AR_plot_task, color = "steelblue", width = 0.62, size = 1.5) +
+  geom_point(aes(y = Task, x = Effect_Size, size = 1/ Effect_Size_se), data = data_AR_final, color = "black", alpha = 0.1,
+             position = position_jitter(width = 0, height = 0.3), shape = 21, stroke = 1.1, fill = "grey40") +
+  geom_point(aes(y = effect1__, x = estimate__), data = data_AR_plot_task, color = "black", fill = "black", size = 4, alpha = 1, stroke = 0.5) +
+  geom_point(aes(y = effect1__, x = estimate__), data = data_AR_plot_task, color = "#FC4E07", fill = "black", size = 3, alpha = 0.9, stroke = 0.5) +
+  scale_x_continuous(breaks=c(-2, -1, 0, 1, 2, 3, 4, 5, 6)) +
+  scale_colour_manual(labels = c('Language'), values = c("#FC4E07")) +
+  geom_vline(aes(xintercept = 0), color = "black", size = 0.3, linetype="dotted") +
+  xlab("Effect Size (Hedges' g)") +
+  ylab("Task") +
+  ggtitle('Articulation Rate as a Function of Task') +
+  coord_flip() +
+  theme_bw()
+c_eff_plot_task_AR <- c_eff_plot_task_AR + theme(plot.title = element_text(hjust = 0.5, size=15),
+                                                 legend.position = "none")
+c_eff_plot_task_AR
+
+#Plot for environment:
+AR_task_environment_language_age_m <- readRDS('models/AR_environment_language_age_m.rds')
+c_eff <- conditional_effects(AR_task_environment_language_age_m)
+data_AR_plot_environment <- c_eff$Environment
+
+c_eff_plot_environment_AR <- ggplot() +
+  geom_errorbar(aes(y = effect1__, xmin = lower__, xmax = upper__), data = data_AR_plot_environment, color = "steelblue", width = 0.62, size = 1.5) +
+  geom_point(aes(y = Environment, x = Effect_Size, size = 1/ Effect_Size_se), data = data_AR_final, color = "black", alpha = 0.1,
+             position = position_jitter(width = 0, height = 0.3), shape = 21, stroke = 1.1, fill = "grey40") +
+  geom_point(aes(y = effect1__, x = estimate__), data = data_AR_plot_environment, color = "black", fill = "black", size = 4, alpha = 1, stroke = 0.5) +
+  geom_point(aes(y = effect1__, x = estimate__), data = data_AR_plot_environment, color = "#FC4E07", fill = "black", size = 3, alpha = 0.9, stroke = 0.5) +
+  scale_x_continuous(breaks=c(-2, -1, 0, 1, 2, 3, 4, 5, 6)) +
+  scale_colour_manual(labels = c('Language'), values = c("#FC4E07")) +
+  geom_vline(aes(xintercept = 0), color = "black", size = 0.3, linetype="dotted") +
+  xlab("Effect Size (Hedges' g)") +
+  ylab("Environment") +
+  ggtitle('Articulation Rate as a Function of Environment') +
+  coord_flip() +
+  theme_bw()
+c_eff_plot_environment_AR <- c_eff_plot_environment_AR + theme(plot.title = element_text(hjust = 0.5, size=15),
+                                                               legend.position = "none")
+c_eff_plot_environment_AR
+```
+
+```{r}
+#Same for VD:
+VD_task_environment_language_age_m <- 
+  brm_multiple(
+    baseline_te,
+    save_pars = save_pars(all = TRUE),
+    data = data_VD_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "VD_task_environment_language_age_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.999,
+      max_treedepth = 20 ))
+
+summary(VD_task_environment_language_age_m)
+pp_check(VD_task_environment_language_age_m, ndraws = 100)
+```
+
+```{r}
+#Plot estimates according to Language:
+c_eff <- conditional_effects(VD_task_environment_language_age_m)
+VD_age_language_model_data <- c_eff$Language
+
+c_eff_plot_language_VD <- ggplot() +
+  geom_point(aes(y = reorder(effect1__, estimate__), x = estimate__), data = VD_age_language_model_data, color = "black", fill = "black", size = 4, alpha = 1, stroke = 0.5) +
+  geom_point(aes(y = effect1__, x = estimate__), data = VD_age_language_model_data, color = "#FC4E07", fill = "black", size = 3, alpha = 0.9, stroke = 0.5) +
+  geom_errorbar(aes(y = effect1__, xmin = lower__, xmax = upper__), data = VD_age_language_model_data, color = "steelblue") +
+  geom_point(aes(y = Language, x = Effect_Size, size = 1/ Effect_Size_se), data = data_VD_final, color = "black", alpha = 0.1, 
+             position = position_jitter(width = 0, height = 0.2), shape = 21, stroke = 1.1, fill = "grey40") +
+  scale_x_continuous(breaks=c(-2, -1, 0, 1, 2, 3, 4, 5, 6)) +
+  scale_colour_manual(labels = c('Language'), values = c("#FC4E07")) +
+  geom_vline(aes(xintercept = 0), color = "black", size = 0.3, linetype="dotted") +
+  xlab("Effect Size (Hedges' g)") +
+  ylab("Language") +
+  ggtitle('Vowel Duration as a Function of Language') +
+  theme_bw()
+c_eff_plot_language_VD <- c_eff_plot_language_VD + theme(plot.title = element_text(hjust = 0.5, size=15),
+                                                         legend.position = "none")
+c_eff_plot_language_VD
+
+#Plot estimates according to Age: 
+c_eff <- conditional_effects(VD_task_environment_language_age_m, effects = 'Age_months', spaghetti = T, ndraws = 100)
+c_eff_plot_age_VD <- plot(c_eff,
+                          mean = FALSE, 
+                          points = T, 
+                          point_args = c(alpha = 0.8, size = 2, show.legend = FALSE, width = 0.3), 
+                          spaghetti_args = c(alpha = 1, size = 0.4), 
+                          plot = FALSE)[[1]]
+c_eff_plot_age_VD <- c_eff_plot_age_VD +
+  geom_point(aes(y = Effect_Size, x = Age_months, size = 1/ Effect_Size_se), data = data_VD_final, color = "black", alpha = 0.1, 
+             shape = 21, stroke = 1.1, fill = "grey40") +
+  geom_hline(aes(yintercept = 0), color = "black", size = 0.3, linetype="dotted") +
+  xlab("Mean Age in Months") +
+  ylab("Effect Size (Hedges' g)") +
+  ggtitle('Vowel Duration as a Function of Age') +
+  geom_line(color = "#FC4E07") +
+  guides(color = guide_legend(override.aes = list(alpha = 0.5, size = 1))) +
+  theme_bw()
+
+c_eff_plot_age_VD <- c_eff_plot_age_VD + theme(plot.title = element_text(hjust = 0.5, size=15),
+                                               legend.position = "none")
+c_eff_plot_age_VD
+
+#Plots of Task and Environment:
+c_eff <- conditional_effects(VD_task_environment_language_age_m)
+data_VD_plot_task <- c_eff$Task
+
+c_eff_plot_task_VD <- ggplot() +
+  geom_errorbar(aes(y = effect1__, xmin = lower__, xmax = upper__), data = data_VD_plot_task, color = "steelblue", width = 0.62, size = 1.5) +
+  geom_point(aes(y = Task, x = Effect_Size, size = 1/ Effect_Size_se), data = data_VD_final, color = "black", alpha = 0.1,
+             position = position_jitter(width = 0, height = 0.3), shape = 21, stroke = 1.1, fill = "grey40") +
+  geom_point(aes(y = effect1__, x = estimate__), data = data_VD_plot_task, color = "black", fill = "black", size = 4, alpha = 1, stroke = 0.5) +
+  geom_point(aes(y = effect1__, x = estimate__), data = data_VD_plot_task, color = "#FC4E07", fill = "black", size = 3, alpha = 0.9, stroke = 0.5) +
+  scale_x_continuous(breaks=c(-2, -1, 0, 1, 2, 3, 4, 5, 6)) +
+  scale_colour_manual(labels = c('Language'), values = c("#FC4E07")) +
+  geom_vline(aes(xintercept = 0), color = "black", size = 0.3, linetype="dotted") +
+  xlab("Effect Size (Hedges' g)") +
+  ylab("Task") +
+  ggtitle('Vowel Duration as a Function of Task') +
+  coord_flip() +
+  theme_bw()
+c_eff_plot_task_VD <- c_eff_plot_task_VD + theme(plot.title = element_text(hjust = 0.5, size=15),
+                                                 legend.position = "none")
+c_eff_plot_task_VD
+
+#Plot for environment:
+data_VD_plot_environment <- c_eff$Environment
+
+c_eff_plot_environment_VD <- ggplot() +
+  geom_errorbar(aes(y = effect1__, xmin = lower__, xmax = upper__), data = data_VD_plot_environment, color = "steelblue", width = 0.62, size = 1.5) +
+  geom_point(aes(y = Environment, x = Effect_Size, size = 1/ Effect_Size_se), data = data_VD_final, color = "black", alpha = 0.1,
+             position = position_jitter(width = 0, height = 0.3), shape = 21, stroke = 1.1, fill = "grey40") +
+  geom_point(aes(y = effect1__, x = estimate__), data = data_VD_plot_environment, color = "black", fill = "black", size = 4, alpha = 1, stroke = 0.5) +
+  geom_point(aes(y = effect1__, x = estimate__), data = data_VD_plot_environment, color = "#FC4E07", fill = "black", size = 3, alpha = 0.9, stroke = 0.5) +
+  scale_x_continuous(breaks=c(-2, -1, 0, 1, 2, 3, 4, 5, 6)) +
+  scale_colour_manual(labels = c('Language'), values = c("#FC4E07")) +
+  geom_vline(aes(xintercept = 0), color = "black", size = 0.3, linetype="dotted") +
+  xlab("Effect Size (Hedges' g)") +
+  ylab("Environment") +
+  ggtitle('Vowel Duration as a Function of Environment') +
+  coord_flip() +
+  theme_bw()
+c_eff_plot_environment_VD <- c_eff_plot_environment_VD + theme(plot.title = element_text(hjust = 0.5, size=15),
+                                                               legend.position = "none")
+c_eff_plot_environment_VD
+```
+
+```{r}
+#Same for F0V:
+F0V_task_environment_language_age_m <- 
+  brm_multiple(
+    baseline_te,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0V_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "F0V_task_environment_language_age_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.999,
+      max_treedepth = 20 ))
+
+summary(F0V_task_environment_language_age_m)
+pp_check(F0V_task_environment_language_age_m, ndraws = 100)
+
+```
+
+```{r}
+#Plot estimates according to Language:
+c_eff <- conditional_effects(F0V_task_environment_language_age_m)
+F0V_age_language_model_data <- c_eff$Language
+
+data_F0V_plot <- data_F0V_final %>%
+  filter(Age_months > 0)
+
+F0V_age_language_model_data$Language <- reorder(F0V_age_language_model_data$Language, F0V_age_language_model_data$estimate__)
+data_F0V_plot$Language_order <- match(data_F0V_plot$Language, F0V_age_language_model_data$Language)
+data_F0V_plot$Language <- as.factor(reorder(data_F0V_plot$Language, data_F0V_plot$Language_order))
+
+c_eff_plot_language_F0V <- ggplot() +
+  geom_point(aes(y = reorder(effect1__, estimate__), x = estimate__), data = F0V_age_language_model_data, color = "black", fill = "black", size = 4, alpha = 1, stroke = 0.5) +
+  geom_point(aes(y = effect1__, x = estimate__), data = F0V_age_language_model_data, color = "#FC4E07", fill = "black", size = 3, alpha = 0.9, stroke = 0.5) +
+  geom_errorbar(aes(y = effect1__, xmin = lower__, xmax = upper__), data = F0V_age_language_model_data, color = "steelblue") +
+  geom_point(aes(y = Language, x = Effect_Size, size = 1/ Effect_Size_se), data = data_F0V_plot, color = "black", alpha = 0.1, position = position_jitter(width = 0, height = 0.2), shape = 21, stroke = 1.1, fill = "grey40") +
+  scale_x_continuous(breaks=c(-2, -1, 0, 1, 2, 3, 4, 5, 6)) +
+  scale_colour_manual(labels = c('Language'), values = c("#FC4E07")) +
+  geom_vline(aes(xintercept = 0), color = "black", size = 0.3, linetype="dotted") +
+  xlab("Effect Size (Hedges' g)") +
+  ylab("Language") +
+  ggtitle(expression(paste(italic(f)[o], " Variability as a Function of Language"))) +
+  theme_bw()
+c_eff_plot_language_F0V <- c_eff_plot_language_F0V + theme(plot.title = element_text(hjust = 0.5, size=15),
+                                                           legend.position = "none")
+
+c_eff_plot_language_F0V
+
+#Plot estimates according to Age: 
+c_eff <- conditional_effects(F0V_task_environment_language_age_m, effects = 'Age_months', spaghetti = T, ndraws = 150)
+c_eff_plot_age_F0V <- plot(c_eff,
+                           mean = FALSE, 
+                           points = F, 
+                           point_args = c(alpha = 0.8, size = 2, show.legend = FALSE, width = 0.3), 
+                           spaghetti_args = c(alpha = 1, size = 0.4), 
+                           plot = FALSE)[[1]]
+c_eff_plot_age_F0V <- c_eff_plot_age_F0V +
+  geom_point(aes(y = Effect_Size, x = Age_months, size = 1/ Effect_Size_se), data = data_F0V_final, color = "black", alpha = 0.1, 
+             shape = 21, stroke = 1.1, fill = "grey40") +
+  geom_hline(aes(yintercept = 0), color = "black", size = 0.3, linetype="dotted") +
+  xlim(c(0, 38)) +
+  xlab("Mean Age in Months") +
+  ylab("Effect Size (Hedges' g)") +
+  ggtitle(expression(paste(italic(f)[o], " Variability as a Function of Age"))) +
+  geom_line(color = "#FC4E07") +
+  guides(color = guide_legend(override.aes = list(alpha = 0.5, size = 1))) +
+  theme_bw()
+
+c_eff_plot_age_F0V <- c_eff_plot_age_F0V + theme(plot.title = element_text(hjust = 0.5, size=15),
+                                                 legend.position = "none")
+c_eff_plot_age_F0V
+
+#Plots of Task and Environment:
+c_eff <- conditional_effects(F0V_task_environment_language_age_m)
+
+data_F0V_plot_task <- c_eff$Task
+
+c_eff_plot_task_F0V <- ggplot() +
+  geom_errorbar(aes(y = effect1__, xmin = lower__, xmax = upper__), data = data_F0V_plot_task, color = "steelblue", width = 0.62, size = 1.5) +
+  geom_point(aes(y = Task, x = Effect_Size, size = 1/ Effect_Size_se), data = data_F0V_final, color = "black", alpha = 0.1,
+             position = position_jitter(width = 0, height = 0.3), shape = 21, stroke = 1.1, fill = "grey40") +
+  geom_point(aes(y = effect1__, x = estimate__), data = data_F0V_plot_task, color = "black", fill = "black", size = 4, alpha = 1, stroke = 0.5) +
+  geom_point(aes(y = effect1__, x = estimate__), data = data_F0V_plot_task, color = "#FC4E07", fill = "black", size = 3, alpha = 0.9, stroke = 0.5) +
+  scale_x_continuous(breaks=c(-2, -1, 0, 1, 2, 3, 4, 5, 6)) +
+  scale_colour_manual(labels = c('Language'), values = c("#FC4E07")) +
+  geom_vline(aes(xintercept = 0), color = "black", size = 0.3, linetype="dotted") +
+  xlab("Effect Size (Hedges' g)") +
+  ylab("Task") +
+  ggtitle(expression(paste(italic(f)[o], " Variability as a Function of Task"))) +
+  coord_flip() +
+  theme_bw()
+c_eff_plot_task_F0V <- c_eff_plot_task_F0V + theme(plot.title = element_text(hjust = 0.5, size=15),
+                                                   legend.position = "none")
+c_eff_plot_task_F0V
+
+#Plot for environment:
+data_F0V_plot_environment <- c_eff$Environment
+
+c_eff_plot_environment_F0V <- ggplot() +
+  geom_errorbar(aes(y = effect1__, xmin = lower__, xmax = upper__), data = data_F0V_plot_environment, color = "steelblue", width = 0.62, size = 1.5) +
+  geom_point(aes(y = Environment, x = Effect_Size, size = 1/ Effect_Size_se), data = data_F0V_final, color = "black", alpha = 0.1,
+             position = position_jitter(width = 0, height = 0.3), shape = 21, stroke = 1.1, fill = "grey40") +
+  geom_point(aes(y = effect1__, x = estimate__), data = data_F0V_plot_environment, color = "black", fill = "black", size = 4, alpha = 1, stroke = 0.5) +
+  geom_point(aes(y = effect1__, x = estimate__), data = data_F0V_plot_environment, color = "#FC4E07", fill = "black", size = 3, alpha = 0.9, stroke = 0.5) +
+  scale_x_continuous(breaks=c(-2, -1, 0, 1, 2, 3, 4, 5, 6)) +
+  scale_colour_manual(labels = c('Language'), values = c("#FC4E07")) +
+  geom_vline(aes(xintercept = 0), color = "black", size = 0.3, linetype="dotted") +
+  xlab("Effect Size (Hedges' g)") +
+  ylab("Environment") +
+  ggtitle(expression(paste(italic(f)[o], " Variability as a Function of Environment"))) +
+  coord_flip() +
+  theme_bw()
+c_eff_plot_environment_F0V <- c_eff_plot_environment_F0V + theme(plot.title = element_text(hjust = 0.5, size=15),
+                                                                 legend.position = "none")
+c_eff_plot_environment_F0V
+```
+
+3: Task, Age, Language as Predictors
+---------------
+
+```{r, eval = FALSE}
+
+#Add models with only task and environment for each of the acoustic measures:
+baseline_t <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Age_months + 
+                   Language + Task + (1 | Language/id_site/measurement_num))
+
+F0_task_language_age_m <- 
+  brm_multiple(
+    baseline_t,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "F0_task_language_age_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+summary(F0_task_language_age_m)
+pp_check(F0_task_language_age_m, ndraws = 100)
+
+VSA_task_language_age_m <- 
+  brm_multiple(
+    baseline_t,
+    save_pars = save_pars(all = TRUE),
+    data = data_VSA_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "VSA_task_language_age_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+AR_task_language_age_m <- 
+  brm(
+    baseline_t,
+    save_pars = save_pars(all = TRUE),
+    data = data_AR_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "AR_task_language_age_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+VD_task_language_age_m <- 
+  brm_multiple(
+    baseline_t,
+    save_pars = save_pars(all = TRUE),
+    data = data_VD_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "VD_task_language_age_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+F0V_task_language_age_m <- 
+  brm_multiple(
+    baseline_t,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0V_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "F0V_task_language_age_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+```
+
+4: Environment, Age, Language as Predictors
+---------------
+
+```{r, eval = FALSE}
+#Plot for environment:
+baseline_e <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Age_months + 
+                   Language + Environment + (1 | Language/id_site/measurement_num))
+
+F0_environment_language_age_m <- 
+  brm_multiple(
+    baseline_e,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "F0_environment_language_age_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.999,
+      max_treedepth = 20 ))
+
+VSA_environment_language_age_m <- 
+  brm_multiple(
+    baseline_e,
+    save_pars = save_pars(all = TRUE),
+    data = data_VSA_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "VSA_environment_language_age_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.999,
+      max_treedepth = 20 ))
+
+AR_environment_language_age_m <- 
+  brm_multiple(
+    baseline_e,
+    save_pars = save_pars(all = TRUE),
+    data = data_AR_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "AR_environment_language_age_m"),
+    sample_prior = T,
+    iter = 10000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.999,
+      max_treedepth = 20 ))
+
+VD_environment_language_age_m <- 
+  brm_multiple(
+    baseline_e,
+    save_pars = save_pars(all = TRUE),
+    data = data_VD_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "VD_environment_language_age_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.999,
+      max_treedepth = 20 ))
+
+F0V_environment_language_age_m <- 
+  brm_multiple(
+    baseline_e,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0V_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "F0V_environment_language_age_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.999,
+      max_treedepth = 20 ))
+```
+
+
+5: Age, Language as Predictors
+---------------
+
+```{r, eval = FALSE}
+baseline_f <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + 
+                   Language + Age_months + (1 | Language/id_site/measurement_num))
+
+F0_age_language_m <- 
+  brm_multiple(
+    baseline_f,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "F0_age_language_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+pp_check(F0_age_language_m, ndraws = 100)
+
+VSA_age_language_m <- 
+  brm_multiple(
+    baseline_f,
+    save_pars = save_pars(all = TRUE),
+    data = data_VSA_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "VSA_age_language_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+pp_check(VSA_age_language_m, ndraws = 100)
+
+AR_age_language_m <- 
+  brm_multiple(
+    baseline_f,
+    save_pars = save_pars(all = TRUE),
+    data = data_AR_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "AR_age_language_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+pp_check(AR_age_language_m, ndraws = 100)
+
+VD_age_language_m <- 
+  brm_multiple(
+    baseline_f,
+    save_pars = save_pars(all = TRUE),
+    data = data_VD_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "VD_age_language_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+pp_check(VD_age_language_m, ndraws = 100)
+
+F0V_age_language_m <- 
+  brm_multiple(
+    baseline_f,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0V_multiple_final,
+    family = student,
+    prior = priors1,
+    file = here("models", "F0V_age_language_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+pp_check(F0V_age_language_m, ndraws = 100)
+```
+
+6: Language as Predictors
+---------------
+
+```{r, eval = FALSE}
+baseline_a <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Language + (1 | Study/Language/measurement_num))
+
+priors2 <- c(prior(normal(0, 2.5), class = Intercept),
+             prior(normal(1, 1), class = sd),
+             prior(normal(0, 1), class = b),
+             prior(gamma(2, 0.1), class = nu))
+
+F0_language_m <- 
+  brm_multiple(
+    baseline_a,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0_multiple_final, 
+    family = student,
+    prior = priors2,
+    file = here("models", "F0_language_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+VSA_language_m <- 
+  brm_multiple(
+    baseline_a,
+    save_pars = save_pars(all = TRUE),
+    data = data_VSA_multiple_final, 
+    family = student,
+    prior = priors2,
+    file = here("models", "VSA_language_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+AR_language_m <- 
+  brm_multiple(
+    baseline_a,
+    save_pars = save_pars(all = TRUE),
+    data = data_AR_multiple_final, 
+    family = student,
+    prior = priors2,
+    file = here("models", "AR_language_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+VD_language_m <- 
+  brm_multiple(
+    baseline_a,
+    save_pars = save_pars(all = TRUE),
+    data = data_VD_multiple_final, 
+    family = student,
+    prior = priors2,
+    file = here("models", "VD_language_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+pp_check(VD_language_m, ndraws = 50)
+
+F0V_language_m <- 
+  brm_multiple(
+    baseline_a,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0V_multiple_final, 
+    family = student,
+    prior = priors2,
+    file = here("models", "F0V_language_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+pp_check(F0V_language_m, ndraws = 50)
+```
+
+7: Age as Predictor
+---------------
+
+```{r, eval = FALSE, warning=FALSE}
+baseline_o <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Age_months + (1 | Language/id_site/measurement_num))
+
+F0_age_m <- 
+  brm_multiple(
+    baseline_o,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "F0_age_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+pp_check(F0_age_m, ndraws = 50)
+
+VSA_age_m <- 
+  brm_multiple(
+    baseline_o,
+    save_pars = save_pars(all = TRUE),
+    data = data_VSA_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "VSA_age_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+pp_check(VSA_age_m, ndraws = 50)
+
+AR_age_m <- 
+  brm_multiple(
+    baseline_o,
+    save_pars = save_pars(all = TRUE),
+    data = data_AR_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "AR_age_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+pp_check(AR_age_m, ndraws = 50)
+
+VD_age_m <- 
+  brm_multiple(
+    baseline_o,
+    save_pars = save_pars(all = TRUE),
+    data = data_VD_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "VD_age_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+pp_check(VD_age_m, ndraws = 50)
+
+F0V_age_m <- 
+  brm_multiple(
+    baseline_o,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0V_multiple_final,
+    family = student,
+    prior = priors1,
+    file = here("models", "F0V_age_m"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+pp_check(F0V_age_m, ndraws = 50)
+```
+
+8: Compute Influence of Data Imputation
+---------------
+
+```{r, warning=FALSE}
+data_F0 <- readRDS("data_F0_final.RData")
+data_VSA <- readRDS("data_VSA_final.RData")
+data_AR <- readRDS("data_AR_final.RData")
+data_VD <- readRDS("data_VD_final.RData")
+data_F0V <- readRDS("data_F0V_final.RData")
+
+#We use only the data that report means and sds:
+effectsize <- esc_mean_sd(grp2m = data_F0$F0_Mean_ADS,
+                          grp2sd = data_F0$F0_Mean_ADS_SD,
+                          grp2n = data_F0$Sample_Size_ADS,
+                          grp1m = data_F0$F0_Mean_IDS,
+                          grp1sd = data_F0$F0_Mean_IDS_SD,
+                          grp1n = data_F0$Sample_Size_IDS, 
+                          es.type = "g")
+
+data_F0_nonimputed <- data_F0 %>%
+  mutate(Effect_Size = effectsize$es) %>%
+  mutate(Effect_Size_se = effectsize$se) %>%
+  mutate(measurement_num = seq(1, nrow(data_F0))) %>%
+  drop_na()
+
+F0_intercept_nonimputed <- 
+  brm(
+    baseline_z,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0_nonimputed, 
+    family = student,
+    prior = priors,
+    file = here("models", "F0_intercept_nonimputed"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+pp_check(F0_intercept_nonimputed, ndraws = 100)
+
+F0_intercept_nonimputed
+F0_intercept_m
+
+#We use only the data that report means and sds:
+effectsize <- esc_mean_sd(grp2m = data_VSA$VSA_ADS,
+                          grp2sd = data_VSA$VSA_ADS_SD,
+                          grp2n = data_VSA$Sample_Size_ADS,
+                          grp1m = data_VSA$VSA_IDS,
+                          grp1sd = data_VSA$VSA_IDS_SD,
+                          grp1n = data_VSA$Sample_Size_IDS, 
+                          es.type = "g")
+
+data_VSA_nonimputed <- data_VSA %>%
+  mutate(Effect_Size = effectsize$es) %>%
+  mutate(Effect_Size_se = effectsize$se) %>%
+  mutate(measurement_num = seq(1, nrow(data_VSA))) %>%
+  drop_na()
+
+VSA_intercept_nonimputed <- 
+  brm(
+    baseline_z,
+    save_pars = save_pars(all = TRUE),
+    data = data_VSA_nonimputed, 
+    family = student,
+    prior = priors,
+    file = here("models", "VSA_intercept_nonimputed"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = 2,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+pp_check(VSA_intercept_nonimputed, ndraws = 100)
+VSA_intercept_nonimputed
+VSA_intercept_m
+
+#We use only the data that report means and sds:
+effectsize <- esc_mean_sd(grp2m = data_AR$Articulation_Rate_ADS,
+                          grp2sd = data_AR$Articulation_Rate_ADS_SD,
+                          grp2n = data_AR$Sample_Size_ADS,
+                          grp1m = data_AR$Articulation_Rate_IDS,
+                          grp1sd = data_AR$Articulation_Rate_IDS_SD,
+                          grp1n = data_AR$Sample_Size_IDS, 
+                          es.type = "g")
+
+data_AR_nonimputed <- data_AR %>%
+  mutate(Effect_Size = effectsize$es) %>%
+  mutate(Effect_Size_se = effectsize$se) %>%
+  mutate(measurement_num = seq(1, nrow(data_AR))) %>%
+  drop_na()
+
+AR_intercept_nonimputed <- 
+  brm(
+    baseline_z,
+    save_pars = save_pars(all = TRUE),
+    data = data_AR_nonimputed, 
+    family = student,
+    prior = priors,
+    file = here("models", "AR_intercept_nonimputed"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+pp_check(AR_intercept_nonimputed, ndraws = 100)
+AR_intercept_nonimputed
+AR_intercept_m
+
+#same for vowel duration:
+#We use only the data that report means and sds:
+effectsize <- esc_mean_sd(grp2m = data_VD$ADS_Vowel_Duration,
+                          grp2sd = data_VD$ADS_Vowel_Duration_SD,
+                          grp2n = data_VD$Sample_Size_ADS,
+                          grp1m = data_VD$IDS_Vowel_Duration,
+                          grp1sd = data_VD$IDS_Vowel_Duration_SD,
+                          grp1n = data_VD$Sample_Size_IDS, 
+                          es.type = "g")
+
+data_VD_nonimputed <- data_VD %>%
+  mutate(Effect_Size = effectsize$es) %>%
+  mutate(Effect_Size_se = effectsize$se) %>%
+  mutate(measurement_num = seq(1, nrow(data_VD))) %>%
+  drop_na()
+
+VD_intercept_nonimputed <- 
+  brm(
+    baseline_z,
+    save_pars = save_pars(all = TRUE),
+    data = data_VD_nonimputed, 
+    family = student,
+    prior = priors,
+    file = here("models", "VD_intercept_nonimputed"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = 2,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+pp_check(VD_intercept_nonimputed, ndraws = 100)
+VD_intercept_nonimputed
+VD_intercept_m
+
+#same for F0 variability:
+#We use only the data that report means and sds:
+effectsize <- esc_mean_sd(grp2m = data_F0V$ADS_F0_Variability,
+                          grp2sd = data_F0V$ADS_F0_Variability_SD,
+                          grp2n = data_F0V$Sample_Size_ADS,
+                          grp1m = data_F0V$IDS_F0_Variability,
+                          grp1sd = data_F0V$IDS_F0_Variability_SD,
+                          grp1n = data_F0V$Sample_Size_IDS, 
+                          es.type = "g")
+
+data_F0V_nonimputed <- data_F0V %>%
+  mutate(Effect_Size = effectsize$es) %>%
+  mutate(Effect_Size_se = effectsize$se) %>%
+  mutate(measurement_num = seq(1, nrow(data_F0V))) %>%
+  drop_na()
+
+F0V_intercept_nonimputed <- 
+  brm(
+    baseline_z,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0V_nonimputed, 
+    family = student,
+    prior = priors,
+    file = here("models", "F0V_intercept_nonimputed"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+pp_check(F0V_intercept_nonimputed, ndraws = 100)
+F0V_intercept_nonimputed
+```
+
+9: Prior Predictive Models
+---------------
+
+```{r}
+#Let's start with a prior predictive check:
+F0_intercept_prior <- 
+  brm(
+    baseline_z,
+    data = data_F0_multiple_final[[1]],
+    family = student,
+    prior = priors,
+    sample_prior = "only",
+    file = here("models", "F0_intercept_prior"),
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    iter = 2000,
+    warmup = 500,
+    cores = 2,
+    chains = 2,
+    control = list(adapt_delta = 0.99,
+                   max_treedepth = 20))
+
+#Let's start with a prior predictive check:
+VSA_intercept_prior <- 
+  brm(
+    baseline_z,
+    data = data_VSA_multiple_final[[1]],
+    family = student,
+    prior = priors,
+    sample_prior = "only",
+    file = here("models", "VSA_intercept_prior"),
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    iter = 2000,
+    warmup = 500,
+    cores = 2,
+    chains = 2,
+    control = list(adapt_delta = 0.99,
+                   max_treedepth = 20))
+
+#Let's start with a prior predictive check:
+AR_intercept_prior <- 
+  brm(
+    baseline_z,
+    data = data_AR_multiple_final[[1]],
+    family = student,
+    prior = priors,
+    sample_prior = "only",
+    file = here("models", "AR_intercept_prior"),
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    iter = 2000,
+    warmup = 500,
+    cores = 2,
+    chains = 2,
+    control = list(adapt_delta = 0.99,
+                   max_treedepth = 20))
+
+#Let's start with a prior predictive check:
+VD_intercept_prior <- 
+  brm(
+    baseline_z,
+    data = data_VD_multiple_final[[1]],
+    family = student,
+    prior = priors,
+    sample_prior = "only",
+    file = here("models", "VD_intercept_prior"),
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    iter = 2000,
+    warmup = 500,
+    cores = 2,
+    chains = 2,
+    control = list(adapt_delta = 0.99,
+                   max_treedepth = 20))
+
+#Let's start with a prior predictive check:
+F0V_intercept_prior <- 
+  brm(
+    baseline_z,
+    data = data_F0V_multiple_final[[1]],
+    family = student,
+    prior = priors,
+    sample_prior = "only",
+    file = here("models", "F0V_intercept_prior"),
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    iter = 2000,
+    warmup = 500,
+    cores = 2,
+    chains = 2,
+    control = list(adapt_delta = 0.99,
+                   max_treedepth = 20))
+
+```
+
+10: Analysis of Publication Bias
+---------------
+
+```{r, warning = FALSE}
+#calculate severity of publication bias needed to "explain away" the results:
+svalue_F0 <- svalue( yi = data_F0_final$Effect_Size,
+                  vi = data_F0_final$Effect_Size_se,
+                  q=0.4,
+                  clustervar = data_F0_final$Study,
+                  model = "robust",
+                  alpha.select = 0.05,
+                  eta.grid.hi = 5,
+                  favor.positive = TRUE,
+                  CI.level = 0.95,
+                  small = TRUE,
+                  return.worst.meta = T)
+svalue_F0
+
+#make sensitivity plot, as in Mathur & VanderWeele (2020):
+eta.list = as.list( c(150, rev( seq(1,100,1) ) ) )
+res.list = lapply( eta.list, function(x) {
+  #cat("\n Working on eta = ", x)
+  return( corrected_meta( yi = data_F0_final$Effect_Size,
+                          vi = data_F0_final$Effect_Size_se,
+                          eta = x,
+                          model = "robust",
+                          favor.positive = TRUE,
+                          clustervar = data_F0_final$Study) )
+}
+)
+
+# put results for each eta in a dataframe and plot:
+res.df = as.data.frame(do.call("rbind", res.list ))
+#plot the results:
+Sensitivity_analysis_F0 <- ggplot(data = res.df, aes(x = eta, y = est)) + 
+  geom_ribbon( data = res.df, aes(x = eta, ymin = lo, ymax = hi), fill = "steelblue", alpha = 0.7) +
+  geom_line( lwd = 1.5) +
+  xlab( 'Publication Probability for Significant Studies') +
+  ylab('Effect Size Esimate' ) + 
+  geom_hline(yintercept = 0.0, linetype = "dotted", color = "red", size = 0.7) +
+  geom_hline(yintercept = svalue_F0$meta.worst$b.r, linetype = "dashed", color = "#FC4E07", size = 0.7) +
+  scale_y_continuous(breaks=seq(0.3,3,0.1)) +
+  ylim(c(-0.01, 1.6)) +
+  scale_x_continuous(breaks=c(0, 20, 40, 60, 80, 100, 120, 140, 160)) +
+  theme_bw()
+
+Sensitivity_analysis_F0 <- Sensitivity_analysis_F0 + 
+  ggtitle(expression(paste("Sensitivity Analysis for ", italic(f)[o]))) +
+  theme(plot.title = element_text(hjust = 0.5, size=15))
+
+#create a significance funnel plot to examine publication bias:
+sig_fun_F0 <- significance_funnel( yi = data_F0_final$Effect_Size,
+                                vi = data_F0_final$Effect_Size_se,
+                                xmin = min(data_F0_final$Effect_Size),
+                                xmax = max(data_F0_final$Effect_Size),
+                                ymin = min(sqrt(data_F0_final$Effect_Size_se)) - 0.1,
+                                ymax = max(sqrt(data_F0_final$Effect_Size_se)) + 0.1,
+                                xlab = "Point Estimate of Effect Size",
+                                ylab = "Standard error of Effect Size",
+                                favor.positive = T,
+                                alpha.select = 0.05)
+sig_fun_F0 <- sig_fun_F0 + 
+  scale_colour_manual(values = c("#FC4E07", "steelblue")) + 
+  ggtitle(expression(paste("Significance Funnel Plot for ", italic(f)[o]))) +
+  theme_bw()
+
+sig_fun_F0 <- sig_fun_F0 +
+  geom_point(aes(x=svalue_F0$meta.worst$b.r, y=min(sqrt(data_F0_final$Effect_Size_se)) - 0.07), size = 8, shape = 18, colour="black", show.legend = F) +
+  geom_point(aes(x=1.47, y=min(sqrt(data_F0_final$Effect_Size_se)) - 0.07), size = 8, shape = 18, colour="steelblue", show.legend = F) +
+  geom_hline(yintercept = min(sqrt(data_F0_final$Effect_Size_se)) - 0.07, linetype = "dashed") +
+  theme(plot.title = element_text(hjust = 0.5, size=15),
+        legend.position = "none")
+
+data_VSA_final <- data_VSA_final %>%
+  drop_na()
+
+#Same for VSA:
+svalue_VSA <- svalue( yi = data_VSA_final$Effect_Size,
+                  vi = data_VSA_final$Effect_Size_se,
+                  q=0.0,
+                  clustervar = data_VSA_final$Study,
+                  model = "robust",
+                  alpha.select = 0.05,
+                  eta.grid.hi = 5,
+                  favor.positive = TRUE,
+                  CI.level = 0.95,
+                  small = TRUE,
+                  return.worst.meta = T)
+svalue_VSA
+
+#make sensitivity plot, as in Mathur & VanderWeele (2020):
+eta.list = as.list( c(150, rev( seq(1,100,1) ) ) )
+res.list = lapply( eta.list, function(x) {
+  #cat("\n Working on eta = ", x)
+  return( corrected_meta( yi = data_VSA_final$Effect_Size,
+                          vi = data_VSA_final$Effect_Size_se,
+                          eta = x,
+                          model = "robust",
+                          favor.positive = TRUE,
+                          clustervar = data_VSA_final$Study) )
+}
+)
+# put results for each eta in a dataframe and plot:
+res.df = as.data.frame(do.call("rbind", res.list ))
+#plot the results:
+Sensitivity_analysis_VSA <- ggplot(data = res.df, aes(x = eta, y = est)) + 
+  geom_ribbon( data = res.df, aes(x = eta, ymin = lo, ymax = hi), fill = "steelblue", alpha = 0.7) +
+  geom_line( lwd = 1.5) +
+  xlab( 'Publication Probability for Significant Studies') +
+  ylab('Effect Size Esimate' ) + 
+  geom_hline(yintercept = 0.0, linetype = "dotted", color = "red", size = 0.7) +
+  geom_hline(yintercept = svalue_VSA$meta.worst$b.r, linetype = "dashed", color = "#FC4E07", size = 0.7) +
+  scale_y_continuous(breaks=seq(0,3,0.1)) +
+  scale_x_continuous(breaks=c(0, 20, 40, 60, 80, 100, 120, 140, 160)) +
+  theme_bw()
+
+Sensitivity_analysis_VSA <- Sensitivity_analysis_VSA + ggtitle("Sensitivity Analysis for Vowel Space Area") +
+  theme(plot.title = element_text(hjust = 0.5, size=15))
+
+#create a significance funnel plot to examine publication bias:
+sig_fun_VSA <- significance_funnel(yi = data_VSA_final$Effect_Size,
+                                   vi = data_VSA_final$Effect_Size_se,
+                                   xmin = min(data_VSA_final$Effect_Size),
+                                   xmax = max(data_VSA_final$Effect_Size),
+                                   ymin = min(sqrt(data_VSA_final$Effect_Size_se)) - 0.1,
+                                   ymax = max(sqrt(data_VSA_final$Effect_Size_se)) + 0.1,
+                                   xlab = "Point Estimate of Effect Size",
+                                   ylab = "Standard error of Effect Size",
+                                   favor.positive = T,
+                                   alpha.select = 0.05)
+sig_fun_VSA <- sig_fun_VSA + 
+  scale_colour_manual(values = c("#FC4E07", "steelblue")) + 
+  ggtitle("Significance Funnel Plot for Vowel Space Area") +
+  theme_bw()
+
+sig_fun_VSA <- sig_fun_VSA +
+  geom_point(aes(x=svalue_VSA$meta.worst$b.r, y=min(sqrt(data_VSA_final$Effect_Size_se)) - 0.07), size = 8, shape = 18, colour="black", show.legend = F) +
+  geom_point(aes(x=0.68, y=min(sqrt(data_VSA_final$Effect_Size_se)) - 0.07), size = 8, shape = 18, colour="steelblue", show.legend = F) +
+  geom_hline(yintercept = min(sqrt(data_VSA_final$Effect_Size_se)) - 0.07, linetype = "dashed") +
+  theme(plot.title = element_text(hjust = 0.5, size=15),
+        legend.position = "none")
+
+#Same for AR:
+svalue_AR <- svalue( yi = data_AR_final$Effect_Size,
+                      vi = data_AR_final$Effect_Size_se,
+                      q= -0.2,
+                      clustervar = data_AR_final$Study,
+                      model = "robust",
+                      alpha.select = 0.05,
+                      eta.grid.hi = 5,
+                      favor.positive = FALSE,
+                      CI.level = 0.95,
+                      small = TRUE,
+                      return.worst.meta = T)
+svalue_AR
+
+#make sensitivity plot, as in Mathur & VanderWeele (2020):
+eta.list = as.list( c(150, rev( seq(1,100,1) ) ) )
+res.list = lapply( eta.list, function(x) {
+  #cat("\n Working on eta = ", x)
+  return( corrected_meta( yi = data_AR_final$Effect_Size,
+                          vi = data_AR_final$Effect_Size_se,
+                          eta = x,
+                          model = "robust",
+                          favor.positive = FALSE,
+                          clustervar = data_AR_final$Study) )
+}
+)
+# put results for each eta in a dataframe and plot:
+res.df = as.data.frame(do.call("rbind", res.list ))
+#plot the results:
+Sensitivity_analysis_AR <- ggplot(data = res.df, aes(x = eta, y = est)) + 
+  geom_ribbon( data = res.df, aes(x = eta, ymin = lo, ymax = hi), fill = "steelblue", alpha = 0.7) +
+  geom_line( lwd = 1.5) +
+  xlab( 'Publication Probability for Significant Studies') +
+  ylab('Effect Size Esimate' ) + 
+  geom_hline(yintercept = 0.0, linetype = "dotted", color = "red", size = 0.7) +
+  geom_hline(yintercept = -svalue_AR$meta.worst$b.r, linetype = "dashed", color = "#FC4E07", size = 0.7) +
+  scale_y_continuous(breaks=seq(-1,0, 0.1)) +
+  scale_x_continuous(breaks=c(0, 20, 40, 60, 80, 100, 120, 140, 160)) +
+  theme_bw()
+
+Sensitivity_analysis_AR <- Sensitivity_analysis_AR + ggtitle("Sensitivity Analysis for Articulation Rate") +
+  theme(plot.title = element_text(hjust = 0.5, size=15))
+
+#create a significance funnel plot to examine publication bias:
+sig_fun_AR <- significance_funnel(yi = data_AR_final$Effect_Size,
+                                   vi = data_AR_final$Effect_Size_se,
+                                   xmin = min(data_AR_final$Effect_Size),
+                                   xmax = max(data_AR_final$Effect_Size),
+                                   ymin = min(sqrt(data_AR_final$Effect_Size_se)) - 0.15,
+                                   ymax = max(sqrt(data_AR_final$Effect_Size_se)) + 0.15,
+                                   xlab = "Point Estimate of Effect Size",
+                                   ylab = "Standard error of Effect Size",
+                                   favor.positive = F,
+                                   alpha.select = 0.05)
+sig_fun_AR <- sig_fun_AR + 
+  scale_colour_manual(values = c("#FC4E07", "steelblue")) + 
+  ggtitle("Significance Funnel Plot for Articulation Rate") +
+  theme_bw()
+
+sig_fun_AR <- sig_fun_AR +
+  geom_point(aes(x=-svalue_AR$meta.worst$b.r, y=min(sqrt(data_AR_final$Effect_Size_se)) - 0.1), size = 8, shape = 18, colour="black", show.legend = F) +
+  geom_point(aes(x=-1.03, y=min(sqrt(data_AR_final$Effect_Size_se)) - 0.1), size = 8, shape = 18, colour="steelblue", show.legend = F) +
+  geom_hline(yintercept = min(sqrt(data_AR_final$Effect_Size_se)) - 0.1, linetype = "dashed") +
+  theme(plot.title = element_text(hjust = 0.5, size=15),
+        legend.position = "none")
+
+#Same for VD:
+svalue_VD <- svalue( yi = data_VD_final$Effect_Size,
+                      vi = data_VD_final$Effect_Size_se,
+                      q=0.18,
+                      clustervar = data_VD_final$Study,
+                      model = "robust",
+                      alpha.select = 0.05,
+                      eta.grid.hi = 5,
+                      favor.positive = TRUE,
+                      CI.level = 0.95,
+                      small = TRUE,
+                      return.worst.meta = T)
+svalue_VD
+
+#make sensitivity plot, as in Mathur & VanderWeele (2020):
+eta.list = as.list( c(150, rev( seq(1,100,1) ) ) )
+res.list = lapply( eta.list, function(x) {
+  #cat("\n Working on eta = ", x)
+  return( corrected_meta( yi = data_VD_final$Effect_Size,
+                          vi = data_VD_final$Effect_Size_se,
+                          eta = x,
+                          model = "robust",
+                          favor.positive = TRUE,
+                          clustervar = data_VD_final$Study) )
+}
+)
+# put results for each eta in a dataframe and plot:
+res.df = as.data.frame(do.call("rbind", res.list ))
+#plot the results:
+Sensitivity_analysis_VD <- ggplot(data = res.df, aes(x = eta, y = est)) + 
+  geom_ribbon( data = res.df, aes(x = eta, ymin = lo, ymax = hi), fill = "steelblue", alpha = 0.7) +
+  geom_line( lwd = 1.5) +
+  xlab( 'Publication Probability for Significant Studies') +
+  ylab('Effect Size Esimate' ) + 
+  geom_hline(yintercept = 0.0, linetype = "dotted", color = "red", size = 0.7) +
+  geom_hline(yintercept = svalue_VD$meta.worst$b.r, linetype = "dashed", color = "#FC4E07", size = 0.7) +
+  scale_y_continuous(breaks=seq(0,3,0.1)) +
+  scale_x_continuous(breaks=c(0, 20, 40, 60, 80, 100, 120, 140, 160)) +
+  theme_bw()
+
+Sensitivity_analysis_VD <- Sensitivity_analysis_VD + ggtitle("Sensitivity Analysis for Vowel Duration") +
+  theme(plot.title = element_text(hjust = 0.5, size=15))
+
+#create a significance funnel plot to examine publication bias:
+sig_fun_VD <- significance_funnel(yi = data_VD_final$Effect_Size,
+                                   vi = data_VD_final$Effect_Size_se,
+                                   xmin = min(data_VD_final$Effect_Size),
+                                   xmax = max(data_VD_final$Effect_Size),
+                                   ymin = min(sqrt(data_VD_final$Effect_Size_se)) - 0.15,
+                                   ymax = max(sqrt(data_VD_final$Effect_Size_se)) + 0.15,
+                                   xlab = "Point Estimate of Effect Size",
+                                   ylab = "Standard error of Effect Size",
+                                   favor.positive = T,
+                                   alpha.select = 0.05)
+sig_fun_VD <- sig_fun_VD + 
+  scale_colour_manual(values = c("#FC4E07", "steelblue")) + 
+  ggtitle("Significance Funnel Plot for Vowel Duration") +
+  theme_bw()
+
+sig_fun_VD <- sig_fun_VD +
+  geom_point(aes(x=svalue_VD$meta.worst$b.r, y=min(sqrt(data_VD_final$Effect_Size_se)) - 0.1), size = 8, shape = 18, colour="black", show.legend = F) +
+  geom_point(aes(x=0.57, y=min(sqrt(data_VD_final$Effect_Size_se)) - 0.1), size = 8, shape = 18, colour="steelblue", show.legend = F) +
+  geom_hline(yintercept = min(sqrt(data_VD_final$Effect_Size_se)) - 0.1, linetype = "dashed") +
+  theme(plot.title = element_text(hjust = 0.5, size=15),
+        legend.position = "none")
+
+#Same for F0V:
+svalue_F0V <- svalue( yi = data_F0V_final$Effect_Size,
+                     vi = data_F0V_final$Effect_Size_se,
+                     q=0.2,
+                     clustervar = data_F0V_final$Study,
+                     model = "robust",
+                     alpha.select = 0.05,
+                     eta.grid.hi = 5,
+                     favor.positive = TRUE,
+                     CI.level = 0.95,
+                     small = TRUE,
+                     return.worst.meta = T)
+
+
+#make sensitivity plot, as in Mathur & VanderWeele (2020):
+eta.list = as.list( c(150, rev( seq(1,100,1) ) ) )
+res.list = lapply( eta.list, function(x) {
+  #cat("\n Working on eta = ", x)
+  return( corrected_meta( yi = data_F0V_final$Effect_Size,
+                          vi = data_F0V_final$Effect_Size_se,
+                          eta = x,
+                          model = "robust",
+                          favor.positive = TRUE,
+                          clustervar = data_F0V_final$Study) )
+}
+)
+# put results for each eta in a dataframe and plot:
+res.df = as.data.frame(do.call("rbind", res.list ))
+#plot the results:
+Sensitivity_analysis_F0V <- ggplot(data = res.df, aes(x = eta, y = est)) + 
+  geom_ribbon( data = res.df, aes(x = eta, ymin = lo, ymax = hi), fill = "steelblue", alpha = 0.7) +
+  geom_line( lwd = 1.5) +
+  xlab( 'Publication Probability for Significant Studies') +
+  ylab('Effect Size Esimate' ) + 
+  geom_hline(yintercept = 0.0, linetype = "dotted", color = "red", size = 0.7) +
+  geom_hline(yintercept = svalue_F0V$meta.worst$b.r, linetype = "dashed", color = "#FC4E07", size = 0.7) +
+  scale_y_continuous(breaks=seq(0,3,0.1)) +
+  scale_x_continuous(breaks=c(0, 20, 40, 60, 80, 100, 120, 140, 160)) +
+  theme_bw()
+
+Sensitivity_analysis_F0V <- Sensitivity_analysis_F0V + 
+  ggtitle(expression(paste("Sensitivity Analysis for ", italic(f)[o], " Variability"))) +
+  theme(plot.title = element_text(hjust = 0.5, size=15))
+
+#create a significance funnel plot to examine publication bias:
+sig_fun_F0V <- significance_funnel(yi = data_F0V_final$Effect_Size,
+                                  vi = data_F0V_final$Effect_Size_se,
+                                  xmin = min(data_F0V_final$Effect_Size),
+                                  xmax = max(data_F0V_final$Effect_Size),
+                                  ymin = min(sqrt(data_F0V_final$Effect_Size_se)) - 0.1,
+                                  ymax = max(sqrt(data_F0V_final$Effect_Size_se)) + 0.15,
+                                  xlab = "Point Estimate of Effect Size",
+                                  ylab = "Standard error of Effect Size",
+                                  favor.positive = T,
+                                  alpha.select = 0.05)
+sig_fun_F0V <- sig_fun_F0V + 
+  scale_colour_manual(values = c("#FC4E07", "steelblue")) + 
+  ggtitle(expression(paste("Significance Funnel Plot for ", italic(f)[o], " Variability"))) +
+  theme_bw()
+
+sig_fun_F0V <- sig_fun_F0V +
+  geom_point(aes(x=svalue_F0V$meta.worst$b.r, y=min(sqrt(data_F0V_final$Effect_Size_se)) - 0.1), size = 8, shape = 18, colour="black", show.legend = F) +
+  geom_point(aes(x=0.95, y=min(sqrt(data_F0V_final$Effect_Size_se)) - 0.1), size = 8, shape = 18, colour="steelblue", show.legend = F) +
+  geom_hline(yintercept = min(sqrt(data_F0V_final$Effect_Size_se)) - 0.1, linetype = "dashed") +
+  theme(plot.title = element_text(hjust = 0.5, size=15),
+        legend.position = "none")
+
+#Plots of publication bias:
+sig_fun_plot_all <- plot_grid(sig_fun_F0,
+                              sig_fun_F0V,
+                              sig_fun_VSA,
+                              sig_fun_AR,
+                              sig_fun_VD,
+                              ncol = 2)
+
+#Plots of publication bias:
+sens_plot_all <- plot_grid(Sensitivity_analysis_F0,
+                           Sensitivity_analysis_F0V,
+                           Sensitivity_analysis_VSA,
+                           Sensitivity_analysis_AR,
+                           Sensitivity_analysis_VD,
+                           ncol = 2)
+```
+
+11: Visualisation Panels
+---------------
+
+```{r}
+#F0:
+F0_conditional_effects <- plot_grid(c_eff_plot_age_F0, c_eff_plot_task_F0, c_eff_plot_environment_F0, ncol = 1)
+c_eff_plot_F0 <- plot_grid(c_eff_plot_language_F0, F0_conditional_effects, ncol = 2)
+c_eff_plot_F0
+
+#VSA:
+VSA_conditional_effects <- plot_grid(c_eff_plot_age_VSA, c_eff_plot_task_VSA, c_eff_plot_environment_VSA, ncol = 1)
+c_eff_plot_VSA <- plot_grid(c_eff_plot_language_VSA, VSA_conditional_effects, ncol = 2)
+c_eff_plot_VSA
+
+#AR:
+AR_conditional_effects <- plot_grid(c_eff_plot_age_AR, c_eff_plot_task_AR, c_eff_plot_environment_AR, ncol = 1)
+c_eff_plot_AR <- plot_grid(c_eff_plot_language_AR, AR_conditional_effects, ncol = 2)
+c_eff_plot_AR
+
+#VD:
+VD_conditional_effects <- plot_grid(c_eff_plot_age_VD, c_eff_plot_task_VD, c_eff_plot_environment_VD, ncol = 1)
+c_eff_plot_VD <- plot_grid(c_eff_plot_language_VD, VD_conditional_effects, ncol = 2)
+c_eff_plot_VD
+
+#F0 Variability:
+F0V_conditional_effects <- plot_grid(c_eff_plot_age_F0V, c_eff_plot_task_F0V, c_eff_plot_environment_F0V, ncol = 1)
+c_eff_plot_F0V <- plot_grid(c_eff_plot_language_F0V, F0V_conditional_effects, ncol = 2)
+c_eff_plot_F0V
+
+#Overview of age plots, Figure S6.6:
+c_eff_plot_age_F0_overview <- c_eff_plot_age_F0 +
+  xlim(c(0, 37))
+
+c_eff_plot_age_VSA_overview <- c_eff_plot_age_VSA +
+  xlim(c(0, 37))
+
+c_eff_plot_age_AR_overview <- c_eff_plot_age_AR +
+  xlim(c(0, 37))
+
+c_eff_plot_age_VD_overview <- c_eff_plot_age_VD +
+  xlim(c(0, 37))
+
+c_eff_plot_age_F0V_overview <- c_eff_plot_age_F0V +
+  xlim(c(0, 37))
+
+age_plot_overview <- plot_grid(c_eff_plot_age_F0_overview, 
+                               c_eff_plot_age_F0V_overview, 
+                               c_eff_plot_age_VSA_overview, 
+                               c_eff_plot_age_AR_overview, 
+                               c_eff_plot_age_VD_overview, 
+                               ncol = 1)
+age_plot_overview
+```
+
+12: Prior Predictive Checks
+---------------
+
+```{r}
+F0_intercept_prior_pp_plot <- pp_check(F0_intercept_prior, ndraws = 50) +
+  scale_color_manual(values = c('black', 'grey')) + 
+  ggtitle(expression(paste("Prior Predictive Check for ", italic(f)[o]))) +
+  theme(plot.title = element_text(hjust = 0.5, size = 15), 
+        legend.title = element_blank())
+
+F0_intercept_posterior_pp_plot <- pp_check(F0_intercept_m, ndraws = 50) +
+  scale_color_manual(values = c('black', 'grey')) + 
+  ggtitle(expression(paste("Posterior Predictive Check for ", italic(f)[o]))) +
+  theme(plot.title = element_text(hjust = 0.5, size = 15), 
+        legend.title = element_blank())
+
+#pp checks for the models:
+VSA_intercept_prior_pp_plot <- pp_check(VSA_intercept_prior, ndraws = 50) +
+  scale_color_manual(values = c('black', 'grey')) + 
+  ggtitle('Prior Predictive Check for Vowel Space Area') + 
+  theme(plot.title = element_text(hjust = 0.5, size = 15), 
+        legend.title = element_blank())
+
+VSA_intercept_posterior_pp_plot <- pp_check(VSA_intercept_m, ndraws = 50) +
+  scale_color_manual(values = c('black', 'grey')) + 
+  ggtitle('Posterior Predictive Check for Vowel Space Area') + 
+  theme(plot.title = element_text(hjust = 0.5, size = 15), 
+        legend.title = element_blank())
+
+#pp checks for the models:
+AR_intercept_prior_pp_plot <- pp_check(AR_intercept_prior, ndraws = 50) +
+  scale_color_manual(values = c('black', 'grey')) + 
+  ggtitle('Prior Predictive Check for Articulation Rate') + 
+  theme(plot.title = element_text(hjust = 0.5, size = 15), 
+        legend.title = element_blank())
+
+AR_intercept_posterior_pp_plot <- pp_check(AR_intercept_m, ndraws = 50) +
+  scale_color_manual(values = c('black', 'grey')) + 
+  ggtitle('Posterior Predictive Check for Articulation Rate') + 
+  theme(plot.title = element_text(hjust = 0.5, size = 12), 
+        legend.title = element_blank())
+
+#pp checks for the models:
+VD_intercept_prior_pp_plot <- pp_check(VD_intercept_prior, ndraws = 50) +
+  scale_color_manual(values = c('black', 'grey')) + 
+  ggtitle('Prior Predictive Check for Vowel Duration') + 
+  theme(plot.title = element_text(hjust = 0.5, size = 15), 
+        legend.title = element_blank())
+
+VD_intercept_posterior_pp_plot <- pp_check(VD_intercept_m, ndraws = 50) +
+  scale_color_manual(values = c('black', 'grey')) + 
+  ggtitle('Posterior Predictive Check for Vowel Duration') + 
+  theme(plot.title = element_text(hjust = 0.5, size = 15), 
+        legend.title = element_blank())
+
+#pp checks for the models:
+F0V_intercept_prior_pp_plot <- pp_check(F0V_intercept_prior, ndraws = 50) +
+  scale_color_manual(values = c('black', 'grey')) + 
+  ggtitle(expression(paste("Prior Predictive Check for ", italic(f)[o], " Variability"))) +
+  theme(plot.title = element_text(hjust = 0.5, size = 15), legend.title = element_blank())
+
+F0V_intercept_posterior_pp_plot <- pp_check(F0V_intercept_m, ndraws = 50) +
+  scale_color_manual(values = c('black', 'grey')) + 
+  ggtitle(expression(paste("Posterior Predictive Check for ", italic(f)[o], " Variability"))) +
+  theme(plot.title = element_text(hjust = 0.5, size = 15), legend.title = element_blank())
+
+pp_checks_all <- plot_grid(F0_intercept_prior_pp_plot,
+                           F0_intercept_posterior_pp_plot,
+                           F0V_intercept_prior_pp_plot,
+                           F0V_intercept_posterior_pp_plot,
+                           VSA_intercept_prior_pp_plot,
+                           VSA_intercept_posterior_pp_plot,
+                           AR_intercept_prior_pp_plot,
+                           AR_intercept_posterior_pp_plot,
+                           VD_intercept_prior_pp_plot,
+                           VD_intercept_posterior_pp_plot,
+                           ncol = 2)
+pp_checks_all
+```
+
+13: Age Distribution for Language and Measure
+---------------
+
+```{r}
+#Plot to show age distributions for each language and measure:
+age_distr_lang_F0 <- 
+  ggplot() +
+  geom_point(aes(y = reorder(Language, desc(Language)), x = Age_months), 
+             data = data_F0_final, 
+             color = "black", 
+             fill = "black", 
+             size = 3, 
+             alpha = 1, 
+             stroke = 0.5) +
+  geom_point(aes(y = reorder(Language, desc(Language)), x = Age_months), 
+             data = data_F0_final, 
+             color = "#FC4E07", 
+             fill = "black", 
+             size = 2, 
+             alpha = 0.9, 
+             stroke = 0.5) +
+  xlim(c(-0.2, 38)) +
+  ylab('Language') +
+  xlab('Infant Age in Months') +
+  ggtitle(expression(paste("Age and Language Distribution for ", italic(f)[o]))) +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 15))
+
+
+age_distr_lang_VSA <- 
+  ggplot() +
+  geom_point(aes(y = reorder(Language, desc(Language)), x = Age_months), 
+             data = data_VSA_final, 
+             color = "black", 
+             fill = "black", 
+             size = 3, 
+             alpha = 1, 
+             stroke = 0.5) +
+  geom_point(aes(y = reorder(Language, desc(Language)), x = Age_months), 
+             data = data_VSA_final, 
+             color = "#FC4E07", 
+             fill = "black", 
+             size = 2, 
+             alpha = 0.9, 
+             stroke = 0.5) +
+  xlim(c(-0.5, 28)) +
+  ylab('Language') +
+  xlab('Infant Age in Months') +
+  ggtitle('Age and Language Distribution for Vowel Space Area') +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 15))
+
+
+age_distr_lang_AR <- 
+  ggplot() +
+  geom_point(aes(y = reorder(Language, desc(Language)), x = Age_months), 
+             data = data_AR_final, 
+             color = "black", 
+             fill = "black", 
+             size = 3, 
+             alpha = 1, 
+             stroke = 0.5) +
+  geom_point(aes(y = reorder(Language, desc(Language)), x = Age_months), 
+             data = data_AR_final, 
+             color = "#FC4E07", 
+             fill = "black", 
+             size = 2, 
+             alpha = 0.9, 
+             stroke = 0.5) +
+  xlim(c(-0.5, 28)) +
+  ylab('Language') +
+  xlab('Infant Age in Months') +
+  ggtitle('Age and Language Distribution for Articulation Rate') +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 15))
+
+
+age_distr_lang_VD <- 
+  ggplot() +
+  geom_point(aes(y = reorder(Language, desc(Language)), x = Age_months), 
+             data = data_VD_final, 
+             color = "black", 
+             fill = "black", 
+             size = 3, 
+             alpha = 1, 
+             stroke = 0.5) +
+  geom_point(aes(y = reorder(Language, desc(Language)), x = Age_months), 
+             data = data_VD_final, 
+             color = "#FC4E07", 
+             fill = "black", 
+             size = 2, 
+             alpha = 0.9, 
+             stroke = 0.5) +
+  xlim(c(-0.5, 28)) +
+  ylab('Language') +
+  xlab('Infant Age in Months') +
+  ggtitle('Age and Language Distribution for Vowel Duration') +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 15))
+
+
+age_distr_lang_F0V <- 
+  ggplot() +
+  geom_point(aes(y = reorder(Language, desc(Language)), x = Age_months), 
+             data = data_F0V_final, 
+             color = "black", 
+             fill = "black", 
+             size = 3, 
+             alpha = 1, 
+             stroke = 0.5) +
+  geom_point(aes(y = reorder(Language, desc(Language)), x = Age_months), 
+             data = data_F0V_final, 
+             color = "#FC4E07", 
+             fill = "black", 
+             size = 2, 
+             alpha = 0.9, 
+             stroke = 0.5) +
+  xlim(c(-0.5, 38)) +
+  ylab('Language') +
+  xlab('Infant Age in Months') +
+  ggtitle(expression(paste("Age and Language Distribution for ", 
+                           italic(f)[o], " Variability"))) +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 15))
+
+age_distr_lang_all <- plot_grid(age_distr_lang_F0,
+                                age_distr_lang_F0V,
+                                age_distr_lang_VSA,
+                                age_distr_lang_AR,
+                                age_distr_lang_VD,
+                                ncol = 2)
+age_distr_lang_all
+```
+
+14: Cross-Tab for Task and Environment
+---------------
+
+```{r}
+#Make cross-tab for task and environment:
+cross_tab_task_environment_F0 <- ggplot(aes(y = Task, 
+                   x = Age_months, 
+                   color = Environment), 
+               data = data_F0_final) + 
+  labs(y= "Task", x = "Infant Age in Months") + 
+  scale_colour_manual(values = c("#FC4E07", "steelblue")) +
+  ggtitle(expression(paste("Cross-Tab for ", italic(f)[o]))) +
+  geom_jitter(aes(color = Environment), height = 0.3, alpha = 0.7, size = 3) +
+  facet_grid(~Environment, scales = "fixed") +
+  theme_bw()
+cross_tab_task_environment_F0 <- cross_tab_task_environment_F0 + theme(plot.title = element_text(hjust = 0.5, size=15),
+             strip.background = element_rect(color="white", fill="white", size=1.5, linetype="solid"),
+             strip.text.x = element_text(size = 10, color = "black"),
+             axis.text.y = element_text(size = 10, color = "black"),
+             legend.position = "none")
+
+cross_tab_task_environment_VSA <- ggplot(aes(y = Task, 
+                   x = Age_months, 
+                   color = Environment), 
+               data = data_VSA_final) + 
+  labs(y= "Task", x = "Infant Age in Months") + 
+  scale_colour_manual(values = c("#FC4E07", "steelblue")) +
+  ggtitle('Cross-Tab for Vowel Space Area') +
+  geom_jitter(aes(color = Environment), height = 0.3, alpha = 0.7, size = 3) +
+  facet_grid(~Environment, scales = "fixed") +
+  theme_bw()
+cross_tab_task_environment_VSA <- cross_tab_task_environment_VSA + theme(plot.title = element_text(hjust = 0.5, size=15),
+             strip.background = element_rect(color="white", fill="white", size=1.5, linetype="solid"),
+             strip.text.x = element_text(size = 10, color = "black"),
+             axis.text.y = element_text(size = 10, color = "black"),
+             legend.position = "none")
+
+cross_tab_task_environment_AR <- ggplot(aes(y = Task, 
+                   x = Age_months, 
+                   color = Environment), 
+               data = data_AR_final) + 
+  labs(y= "Task", x = "Infant Age in Months") + 
+  scale_colour_manual(values = c("#FC4E07", "steelblue")) +
+  ggtitle('Cross-Tab for Articulation Rate') +
+  geom_jitter(aes(color = Environment), height = 0.3, alpha = 0.7, size = 3) +
+  facet_grid(~Environment, scales = "fixed") +
+  theme_bw()
+cross_tab_task_environment_AR <- cross_tab_task_environment_AR + theme(plot.title = element_text(hjust = 0.5, size=15),
+             strip.background = element_rect(color="white", fill="white", size=1.5, linetype="solid"),
+             strip.text.x = element_text(size = 10, color = "black"),
+             axis.text.y = element_text(size = 10, color = "black"),
+             legend.position = "none")
+
+cross_tab_task_environment_VD <- ggplot(aes(y = Task, 
+                   x = Age_months, 
+                   color = Environment), 
+               data = data_VD_final) + 
+  labs(y= "Task", x = "Infant Age in Months") + 
+  scale_colour_manual(values = c("#FC4E07", "steelblue")) +
+  ggtitle('Cross-Tab for Vowel Duration') +
+  geom_jitter(aes(color = Environment), height = 0.3, alpha = 0.7, size = 3) +
+  facet_grid(~Environment, scales = "fixed") +
+  theme_bw()
+cross_tab_task_environment_VD <- cross_tab_task_environment_VD + theme(plot.title = element_text(hjust = 0.5, size=15),
+             strip.background = element_rect(color="white", fill="white", size=1.5, linetype="solid"),
+             strip.text.x = element_text(size = 10, color = "black"),
+             axis.text.y = element_text(size = 10, color = "black"),
+             legend.position = "none")
+
+cross_tab_task_environment_F0V <- ggplot(aes(y = Task, 
+           x = Age_months, 
+           color = Environment), 
+       data = data_F0V_final) + 
+  labs(y= "Task", x = "Infant Age in Months") + 
+  scale_colour_manual(values = c("#FC4E07", "steelblue")) +
+  ggtitle(expression(paste("Cross-Tab for ", italic(f)[o], " Variability"))) +
+  geom_jitter(aes(color = Environment), height = 0.3, alpha = 0.7, size = 3) +
+  facet_grid(~Environment, scales = "fixed") +
+  theme_bw()
+cross_tab_task_environment_F0V <- cross_tab_task_environment_F0V + theme(plot.title = element_text(hjust = 0.5, size=15),
+             strip.background = element_rect(color="white", fill="white", size=1.5, linetype="solid"),
+             strip.text.x = element_text(size = 10, color = "black"),
+             axis.text.y = element_text(size = 10, color = "black"),
+             legend.position = "none")
+
+cross_tab_task_environment_all <- plot_grid(cross_tab_task_environment_F0,
+                                            cross_tab_task_environment_F0V,
+                                            cross_tab_task_environment_VSA,
+                                            cross_tab_task_environment_AR,
+                                            cross_tab_task_environment_VD,
+                                            ncol = 2)
+cross_tab_task_environment_all
+```
+
+15: Prior-Posterior Update Plots
+---------------
+
+```{r}
+#PP Update Plots:
+# Check prior-posterior update plots
+Posterior <- as_draws_df(F0_task_environment_language_age_m)
+
+F0_intercept_pp_update <- 
+  ggplot(Posterior) +
+  geom_density(aes(b_Intercept), fill="#FC4E07", color="#FC4E07",alpha=0.4) + 
+  geom_density(aes(prior_Intercept), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Intercept') +
+  ggtitle(expression(paste("Prior-Posterior Update Plots for ", italic(f)[o]))) +
+  theme_classic() + theme(plot.title = element_text(hjust = 0.5, size=15))
+
+F0_nu_pp_update <- ggplot(Posterior) +
+  geom_density(aes(nu), fill="#FC4E07", color="#FC4E07",alpha=0.4) + 
+  geom_density(aes(prior_nu), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Nu') +
+  theme_classic()
+
+F0_sd_pp_update <- ggplot(Posterior) +
+  geom_density(aes(sd_Language__Intercept), fill="#FC4E07", color="#FC4E07",alpha=0.4) +
+  geom_density(aes(prior_sd_Language), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Standard Deviation of Studies') +
+  theme_classic()
+
+F0_language_pp_update <- ggplot(Posterior) +
+  geom_density(aes(b_LanguageBislama), fill="#FC4E07", color="#FC4E07",alpha=0.4) + 
+  geom_density(aes(b_LanguageBritishEnglish), fill="#E41A1C", color="#E41A1C",alpha=0.4) + 
+  geom_density(aes(b_LanguageCanadianEnglish), fill="#984EA3", color="#984EA3",alpha=0.4) + 
+  geom_density(aes(b_LanguageDanish), fill="#7570B3", color="#7570B3",alpha=0.4) + 
+  geom_density(aes(b_LanguageGerman), fill="#666666", color="#666666",alpha=0.4) + 
+  geom_density(aes(b_LanguageDutch), fill="#66A61E" , color="#66A61E" ,alpha=0.4) + 
+  geom_density(aes(b_LanguageFrench), fill="#FFFF33", color="#FFFF33",alpha=0.4) + 
+  geom_density(aes(b_LanguageItalian), fill="#A65628", color="#A65628",alpha=0.4) + 
+  geom_density(aes(prior_b_LanguageUSEnglish), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Slope, Language Estimates') +
+  theme_classic()
+
+F0_task_pp_update <- ggplot(Posterior) +
+  geom_density(aes(b_Taskspontaneousspeech), fill="#FC4E07", color="#FC4E07",alpha=0.4) +
+  geom_density(aes(b_Environmentnaturalistic), fill="#A65628", color="#A65628",alpha=0.4) + 
+  geom_density(aes(prior_b_Taskspontaneousspeech), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Slope, Task & Environment Estimates') +
+  theme_classic()
+
+F0_age_pp_update <- ggplot(Posterior) +
+  geom_density(aes(b_Age_months), fill="#FC4E07", color="#FC4E07",alpha=0.4) +
+  geom_density(aes(prior_b_Age_months), fill="steelblue", color="steelblue",alpha=0.7) +
+  xlab('Slope, Age Estimate') +
+  theme_classic()
+
+F0_pp_update <- plot_grid(F0_intercept_pp_update, 
+                                       F0_language_pp_update, 
+                                       F0_task_pp_update, 
+                                       F0_age_pp_update, 
+                                       F0_sd_pp_update, 
+                                       F0_nu_pp_update,
+                                       ncol = 1)
+F0_pp_update
+# Check prior-posterior update plots
+#variables(VSA_task_environment_language_age_m)
+Posterior <- as_draws_df(VSA_task_environment_language_age_m)
+
+VSA_intercept_pp_update <- ggplot(Posterior) +
+  geom_density(aes(b_Intercept), fill="#FC4E07", color="#FC4E07",alpha=0.4) + 
+  geom_density(aes(prior_Intercept), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Intercept') +
+  ggtitle('Prior-Posterior Update Plots for Vowel Space Area') +
+  theme_classic() + theme(plot.title = element_text(hjust = 0.5, size=15))
+
+VSA_nu_pp_update <- ggplot(Posterior) +
+  geom_density(aes(nu), fill="#FC4E07", color="#FC4E07",alpha=0.4) + 
+  geom_density(aes(prior_nu), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Nu') +
+  theme_classic()
+
+VSA_sd_pp_update <- ggplot(Posterior) +
+  geom_density(aes(sd_Language__Intercept), fill="#FC4E07", color="#FC4E07",alpha=0.4) +
+  geom_density(aes(prior_sd_Language), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Standard Deviation of Studies') +
+  theme_classic()
+
+VSA_language_pp_update <- ggplot(Posterior) +
+  geom_density(aes(b_LanguageBritishEnglish), fill="#E41A1C", color="#E41A1C",alpha=0.4) + 
+  geom_density(aes(b_LanguageDanish), fill="#7570B3", color="#7570B3",alpha=0.4) + 
+  geom_density(aes(b_LanguageFrench), fill="#FFFF33", color="#FFFF33",alpha=0.4) + 
+  geom_density(aes(b_LanguageCantoneseChinese), fill="#A65628", color="#A65628",alpha=0.4) + 
+  geom_density(aes(prior_b_LanguageUSEnglish), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Slope, Language Estimates') +
+  theme_classic()
+
+VSA_task_pp_update <- ggplot(Posterior) +
+  geom_density(aes(b_Taskspontaneousspeech), fill="#FC4E07", color="#FC4E07",alpha=0.4) +
+  geom_density(aes(b_Environmentnaturalistic), fill="#A65628", color="#A65628",alpha=0.4) + 
+  geom_density(aes(prior_b_Taskspontaneousspeech), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Slope, Task & Environment Estimates') +
+  theme_classic()
+
+VSA_age_pp_update <- ggplot(Posterior) +
+  geom_density(aes(b_Age_months), fill="#FC4E07", color="#FC4E07",alpha=0.4) +
+  geom_density(aes(prior_b_Age_months), fill="steelblue", color="steelblue",alpha=0.7) +
+  xlab('Slope, Age Estimate') +
+  theme_classic()
+
+
+VSA_pp_update <- plot_grid(VSA_intercept_pp_update, 
+                                       VSA_language_pp_update, 
+                                       VSA_task_pp_update, 
+                                       VSA_age_pp_update, 
+                                       VSA_sd_pp_update, 
+                                       VSA_nu_pp_update,
+                                       ncol = 1)
+VSA_pp_update
+
+#Articulation Rate:
+#variables(AR_task_environment_language_age_m)
+Posterior <- as_draws_df(AR_task_environment_language_age_m)
+
+
+AR_intercept_pp_update <- ggplot(Posterior) +
+  geom_density(aes(b_Intercept), fill="#FC4E07", color="#FC4E07",alpha=0.4) + 
+  geom_density(aes(prior_Intercept), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Intercept') +
+  ggtitle('Prior-Posterior Update Plots for Articulation Rate') +
+  theme_classic() + theme(plot.title = element_text(hjust = 0.5, size=15))
+
+AR_nu_pp_update <- ggplot(Posterior) +
+  geom_density(aes(nu), fill="#FC4E07", color="#FC4E07",alpha=0.4) + 
+  geom_density(aes(prior_nu), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Nu') +
+  theme_classic()
+
+AR_sd_pp_update <- ggplot(Posterior) +
+  geom_density(aes(sd_Language__Intercept), fill="#FC4E07", color="#FC4E07",alpha=0.4) +
+  geom_density(aes(prior_sd_Language), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Standard Deviation of Studies') +
+  theme_classic()
+
+AR_language_pp_update <- ggplot(Posterior) +
+  geom_density(aes(b_LanguageBislama), fill="#FC4E07", color="#FC4E07",alpha=0.4) + 
+  geom_density(aes(b_LanguageBritishEnglish), fill="#E41A1C", color="#E41A1C",alpha=0.4) + 
+  geom_density(aes(b_LanguageCanadianEnglish), fill="#984EA3", color="#984EA3",alpha=0.4) + 
+  geom_density(aes(b_LanguageDanish), fill="#7570B3", color="#7570B3",alpha=0.4) + 
+  geom_density(aes(b_LanguageJapanese), fill="#66A61E" , color="#66A61E" ,alpha=0.4) + 
+  geom_density(aes(b_LanguageFrench), fill="#FFFF33", color="#FFFF33",alpha=0.4) + 
+  geom_density(aes(b_LanguageCantoneseChinese), fill="#A65628", color="#A65628",alpha=0.4) + 
+  geom_density(aes(`b_LanguageKenyan&Fijian`), fill="#F781BF", color="#F781BF",alpha=0.4) + 
+  geom_density(aes(prior_b_LanguageUSEnglish), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Slope, Language Estimates') +
+  theme_classic()
+
+AR_task_pp_update <- ggplot(Posterior) +
+  geom_density(aes(b_Environmentnaturalistic), fill="#A65628", color="#A65628",alpha=0.4) + 
+  geom_density(aes(prior_b_Environmentnaturalistic), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Slope, Task & Environment Estimates') +
+  theme_classic()
+
+AR_age_pp_update <- ggplot(Posterior) +
+  geom_density(aes(b_Age_months), fill="#FC4E07", color="#FC4E07",alpha=0.4) +
+  geom_density(aes(prior_b_Age_months), fill="steelblue", color="steelblue",alpha=0.7) +
+  xlab('Slope, Age Estimate') +
+  theme_classic()
+
+
+AR_pp_update <- plot_grid(AR_intercept_pp_update, 
+                          AR_language_pp_update, 
+                          AR_task_pp_update, 
+                          AR_age_pp_update, 
+                          AR_sd_pp_update, 
+                          AR_nu_pp_update,
+                          ncol = 1)
+
+AR_pp_update
+
+#Let's do the same for vowel duration:
+#variables(VD_task_environment_language_age_m)
+Posterior <- as_draws_df(VD_task_environment_language_age_m)
+
+VD_intercept_pp_update <- ggplot(Posterior) +
+  geom_density(aes(b_Intercept), fill="#FC4E07", color="#FC4E07",alpha=0.4) + 
+  geom_density(aes(prior_Intercept), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Intercept') +
+  ggtitle('Prior-Posterior Update Plots for Vowel Duration') +
+  theme_classic() + theme(plot.title = element_text(hjust = 0.5, size=15))
+
+VD_nu_pp_update <-ggplot(Posterior) +
+  geom_density(aes(nu), fill="#FC4E07", color="#FC4E07",alpha=0.4) + 
+  geom_density(aes(prior_nu), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Nu') +
+  theme_classic()
+
+VD_sd_pp_update <- ggplot(Posterior) +
+  geom_density(aes(sd_Language__Intercept), fill="#FC4E07", color="#FC4E07",alpha=0.4) +
+  geom_density(aes(prior_sd_Language), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Standard Deviation of Studies') +
+  theme_classic()
+
+VD_language_pp_update <-ggplot(Posterior) +
+  geom_density(aes(b_LanguageSwedish), fill="#FC4E07", color="#FC4E07",alpha=0.4) + 
+  geom_density(aes(b_LanguageBritishEnglish), fill="#E41A1C", color="#E41A1C",alpha=0.4) + 
+  geom_density(aes(b_LanguageCanadianEnglish), fill="#984EA3", color="#984EA3",alpha=0.4) + 
+  geom_density(aes(b_LanguageDanish), fill="#7570B3", color="#7570B3",alpha=0.4) + 
+  geom_density(aes(b_LanguageJamaicanEnglish), fill="#666666", color="#666666",alpha=0.4) + 
+  geom_density(aes(b_LanguageJapanese), fill="#66A61E" , color="#66A61E" ,alpha=0.4) + 
+  geom_density(aes(b_LanguageNorwegian), fill="#FFFF33", color="#FFFF33",alpha=0.4) + 
+  geom_density(aes(b_LanguageJapanese), fill="#A65628", color="#A65628",alpha=0.4) + 
+  geom_density(aes(b_LanguageScottishEnglish), fill="#F781BF", color="#F781BF",alpha=0.4) + 
+  geom_density(aes(prior_b_LanguageUSEnglish), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Slope, Language Estimates') +
+  theme_classic()
+
+VD_task_pp_update <-ggplot(Posterior) +
+  geom_density(aes(b_Taskspontaneousspeech), fill="#FC4E07", color="#FC4E07",alpha=0.4) +
+  geom_density(aes(b_Environmentnaturalistic), fill="#A65628", color="#A65628",alpha=0.4) + 
+  geom_density(aes(prior_b_Taskspontaneousspeech), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Slope, Task & Environment Estimates') +
+  theme_classic()
+
+VD_age_pp_update <-ggplot(Posterior) +
+  geom_density(aes(b_Age_months), fill="#FC4E07", color="#FC4E07",alpha=0.4) +
+  geom_density(aes(prior_b_Age_months), fill="steelblue", color="steelblue",alpha=0.7) +
+  xlab('Slope, Age Estimate') +
+  theme_classic()
+
+
+VD_pp_update <- plot_grid(VD_intercept_pp_update, 
+                          VD_language_pp_update, 
+                          VD_task_pp_update, 
+                          VD_age_pp_update, 
+                          VD_sd_pp_update, 
+                          VD_nu_pp_update,
+                          ncol = 1)
+VD_pp_update
+
+#And for F0 variability:
+Posterior <- as_draws_df(F0V_task_environment_language_age_m)
+
+F0V_intercept_pp_update <- ggplot(Posterior) +
+  geom_density(aes(b_Intercept), fill="#FC4E07", color="#FC4E07",alpha=0.4) + 
+  geom_density(aes(prior_Intercept), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Intercept') +
+  ggtitle(expression(paste("Prior-Posterior Update Plots for ", italic(f)[o], " Variability"))) +
+  theme_classic() + theme(plot.title = element_text(hjust = 0.5, size=15))
+
+F0V_nu_pp_update <- ggplot(Posterior) +
+  geom_density(aes(nu), fill="#FC4E07", color="#FC4E07",alpha=0.4) + 
+  geom_density(aes(prior_nu), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Nu') +
+  theme_classic()
+
+F0V_sd_pp_update <- ggplot(Posterior) +
+  geom_density(aes(sd_Language__Intercept), fill="#FC4E07", color="#FC4E07",alpha=0.4) +
+  geom_density(aes(prior_sd_Language), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Standard Deviation of Studies') +
+  theme_classic()
+
+F0V_language_pp_update <- ggplot(Posterior) +
+  geom_density(aes(b_LanguageSwedish), fill="#FC4E07", color="#FC4E07",alpha=0.4) + 
+  geom_density(aes(b_LanguageBritishEnglish), fill="#E41A1C", color="#E41A1C",alpha=0.4) + 
+  geom_density(aes(b_LanguageCanadianEnglish), fill="#984EA3", color="#984EA3",alpha=0.4) + 
+  geom_density(aes(b_LanguageDanish), fill="#7570B3", color="#7570B3",alpha=0.4) + 
+  geom_density(aes(b_LanguageBislama), fill="#666666", color="#666666",alpha=0.4) + 
+  geom_density(aes(b_LanguageJapanese), fill="#66A61E" , color="#66A61E" ,alpha=0.4) + 
+  geom_density(aes(b_LanguageNorwegian), fill="#FFFF33", color="#FFFF33",alpha=0.4) + 
+  geom_density(aes(b_LanguageJapanese), fill="#A65628", color="#A65628",alpha=0.4) + 
+  geom_density(aes(b_LanguageScottishEnglish), fill="#F781BF", color="#F781BF",alpha=0.4) + 
+  geom_density(aes(prior_b_LanguageUSEnglish), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Slope, Language Estimates') +
+  theme_classic()
+
+F0V_task_pp_update <- ggplot(Posterior) +
+  geom_density(aes(b_Taskspontaneousspeech), fill="#FC4E07", color="#FC4E07",alpha=0.4) +
+  geom_density(aes(b_Environmentnaturalistic), fill="#A65628", color="#A65628",alpha=0.4) + 
+  geom_density(aes(prior_b_Taskspontaneousspeech), fill="steelblue", color="steelblue",alpha=0.6) +
+  xlab('Slope, Task & Environment Estimates') +
+  theme_classic()
+
+F0V_age_pp_update <- ggplot(Posterior) +
+  geom_density(aes(b_Age_months), fill="#FC4E07", color="#FC4E07",alpha=0.4) +
+  geom_density(aes(prior_b_Age_months), fill="steelblue", color="steelblue",alpha=0.7) +
+  xlab('Slope, Age Estimate') +
+  theme_classic()
+
+
+F0V_pp_update <- plot_grid(F0V_intercept_pp_update, 
+                           F0V_language_pp_update, 
+                           F0V_task_pp_update, 
+                           F0V_age_pp_update, 
+                           F0V_sd_pp_update, 
+                           F0V_nu_pp_update,
+                           ncol = 1)
+F0V_pp_update
+```
+
+
+```{r, fig.width=12, fig.height=17}
+#Collect in panel:
+pp_update_plots <- plot_grid(F0_pp_update,
+                             F0V_pp_update,
+                             VSA_pp_update,
+                             AR_pp_update,
+                             VD_pp_update,
+                             ncol = 2)
+pp_update_plots
+```
+
+16: Heatmap overview of estimates
+---------------
+
+```{r}
+#Make heatmap of meta-analytic estimates:
+F0_age_language_model_data <- readRDS('models/F0_task_environment_language_age_report.rds')
+c_eff <- conditional_effects(F0_age_language_model_data)
+F0_age_language_model_data_heat <- c_eff$Language
+
+F0_heatmap_data <- F0_age_language_model_data_heat %>%
+  mutate(language = effect1__) %>%
+  mutate(estimate = estimate__) %>%
+  mutate(measure = "fo") %>%
+  select(language, estimate, measure)
+
+VSA_age_language_model_data <- readRDS('models/VSA_environment_report.rds')
+c_eff <- conditional_effects(VSA_age_language_model_data)
+VSA_age_language_model_data_heat <- c_eff$Language
+
+VSA_heatmap_data <- VSA_age_language_model_data_heat %>%
+  mutate(language = effect1__) %>%
+  mutate(estimate = estimate__) %>%
+  mutate(measure = "Vowel Space Area") %>%
+  select(language, estimate, measure)
+
+AR_age_language_model_data <- readRDS('models/AR_task_report.rds')
+c_eff <- conditional_effects(AR_age_language_model_data)
+AR_age_language_model_data_heat <- c_eff$Language
+
+test <- tibble(language = AR_age_language_model_data_heat$Language, 
+       estimate = paste(round(AR_age_language_model_data_heat$estimate__, 2), "[", round(AR_age_language_model_data_heat$lower__, 2), ";",  round(AR_age_language_model_data_heat$upper__, 2), "]"))
+
+#note that we shift the articulation rate to display positive values:
+AR_heatmap_data <- AR_age_language_model_data_heat %>%
+  mutate(language = effect1__) %>%
+  mutate(estimate = estimate__) %>%
+  mutate(measure = "Articulation Rate") %>%
+  select(language, estimate, measure) 
+
+VD_age_language_model_data <- readRDS('models/VD_age_language_report.rds')
+c_eff <- conditional_effects(VD_age_language_model_data)
+VD_age_language_model_data_heat <- c_eff$Language
+
+VD_heatmap_data <- VD_age_language_model_data_heat %>%
+  mutate(language = effect1__) %>%
+  mutate(estimate = estimate__) %>%
+  mutate(measure = "Vowel Duration") %>%
+  select(language, estimate, measure) 
+
+
+F0V_age_language_model_data <- readRDS('models/F0V_task_report.rds')
+c_eff <- conditional_effects(F0V_age_language_model_data)
+F0V_age_language_model_data_heat <- c_eff$Language
+
+F0V_heatmap_data <- F0V_age_language_model_data_heat %>%
+  mutate(language = effect1__) %>%
+  mutate(estimate = estimate__) %>%
+  mutate(measure = "fo Variability") %>%
+  select(language, estimate, measure)
+
+heatmap_data <- rbind(F0_heatmap_data,
+                      VSA_heatmap_data,
+                      AR_heatmap_data,
+                      VD_heatmap_data,
+                      F0V_heatmap_data) 
+
+heatmap_data <- heatmap_data %>%
+  mutate(language = as.character(language)) %>%
+  mutate(language = ifelse(language == "USEnglish", "US English", language)) %>%
+  mutate(language = ifelse(language == "SriLankanTamil", "Sri Lankan Tamil", language)) %>%
+  mutate(language = ifelse(language == "ScottishEnglish", "Scottish English", language)) %>%
+  mutate(language = ifelse(language == "NewZealandEnglish", "New Zealand English", language)) %>%
+  mutate(language = ifelse(language == "MandarinChinese", "Mandarin Chinese", language)) %>%
+  mutate(language = ifelse(language == "KenyanFijian", "Kenyan/Fijian", language)) %>%
+  mutate(language = ifelse(language == "FinnishSwedish", "Finnish/Swedish", language)) %>%
+  mutate(language = ifelse(language == "CantoneseChinese", "Cantonese Chinese", language)) %>%
+  mutate(language = ifelse(language == "CanadianEnglish", "Canadian English", language)) %>%
+  mutate(language = ifelse(language == "BritishEnglish", "British English", language)) %>%
+  mutate(language = ifelse(language == "JamaicanEnglish", "Jamaican English", language)) %>%
+  mutate(language = ifelse(language == "QuechuaAchuar", "Quechua/Achuar", language)) %>%
+  mutate(language = ifelse(language == "GuyaneseCreole", "Guyanese Creole", language)) %>%
+  mutate(language = ifelse(language == "QuicheMayan", "Quiche Mayan", language)) %>%
+  mutate(language = ifelse(language == "AustralianEnglish", "Australian English", language))
+  
+
+heatmap_data_family <- heatmap_data %>%
+  mutate(measure = factor(measure, levels = c("fo", "fo Variability", "Vowel Space Area", "Articulation Rate", "Vowel Duration")))
+
+
+heatmap_plot <- ggplot(data = heatmap_data_family, aes(y = reorder(language, desc(language)), 
+                                                       x = measure, fill = estimate)) +
+  geom_tile(col = "white",
+            lwd = 1.5,
+            linetype = 1) +
+  scale_fill_gradient2(low = "steelblue", mid = "white", high = "#FC4E07", 
+                       name = " Effect\n  Size\nEstimate") +
+  geom_text(aes(label = round(estimate, 2)), color = "black", size = 4) +
+  xlab('Acoustic Measure') +
+  ylab('Language') +
+  ggtitle('Heatmap of Acoustic Measures across Languages') +
+  theme_bw()
+
+heatmap_plot <- heatmap_plot + 
+  theme(plot.title = element_text(hjust = 0.5, size = 17),
+        legend.position="bottom",legend.direction="horizontal",
+        axis.text.x = element_text(size = 15),
+        axis.title.x = element_blank(),
+        axis.text.y = element_text(size = 15),
+        axis.title.y = element_text(size = 15)) +
+  guides(fill = guide_colourbar(barwidth = 20,
+                                barheight = 0.5,
+                                label.hjust = 0.5,
+                                ticks = FALSE,
+                                label = T))
+heatmap_plot
+```
+
+17: Prior Sensitivity Checks for Age Slopes
+---------------
+
+The following ten chunks are for the age slope of the models:
+
+```{r, eval=FALSE}
+#code to loop through sd of slope prior:
+priSD <- seq(0.005, 0.2, length.out = 10)
+priorsN <- priors1
+
+#create empty sets to store output of the loop:
+post_pred <- c()
+post_pred_lci <- c()
+post_pred_uci <- c()
+evidence_ratio <- c()
+
+for (i in 1:length(priSD)) {
+  priorsN[4,] <- set_prior(paste0("normal(0, ", priSD[i],")"), class = "b", coef = "Age_months")
+  model_for_loop <- brm(baseline_te,
+                        data   = data_F0_final, 
+                        family = student, 
+                        prior  = priorsN, 
+                        sample_prior = T,
+                        warmup = 1000, 
+                        iter   = 5000, 
+                        cores  = 64,
+                        chains = 2,
+                        #backend = "cmdstanr",
+                        #threads = threading(2),
+                        save_pars = save_pars(all = TRUE),
+                        control = list(adapt_delta   = 0.99, 
+                                       max_treedepth = 15))
+  
+  post_preds <- spread_draws(model_for_loop, b_Age_months)
+  post_pred[i] <- median(post_preds$b_Age_months)
+  post_pred_lci[i] <- quantile(post_preds$b_Age_months, prob = 0.025)
+  post_pred_uci[i] <- quantile(post_preds$b_Age_months, prob = 0.975)
+  
+  evidence_ratio[i] <- hypothesis(model_for_loop, "Age_months < 0")$hypothesis$Evid.Ratio
+}
+
+slope_prior_robustness_F0 <- data.frame(priSD, post_pred, post_pred_lci, post_pred_uci, evidence_ratio)
+write.csv(slope_prior_robustness_F0, file = 'robustness_tests/slope_prior_robustness_F0.csv')
+```
+
+```{r}
+slope_prior_robustness_F0 <- read.csv('robustness_tests/slope_prior_robustness_F0.csv')
+
+slope_prior_robustness_F0_plot <- 
+  ggplot() +
+  geom_vline(xintercept = 0.05, alpha = 0.7, linetype = 2) +
+  geom_point(data = slope_prior_robustness_F0, aes(x=priSD, y=post_pred), 
+             size = 3, color = "black") +
+  geom_point(data = slope_prior_robustness_F0, aes(x=priSD, y=post_pred), 
+             size = 2, color = "#FC4E07") +
+  geom_errorbar(data = slope_prior_robustness_F0, aes(x = priSD, ymin = post_pred_lci, 
+                                                      ymax = post_pred_uci), color = "steelblue") +
+  labs(x="Standard Deviation of Prior for Age", 
+       y="Posterior Estimate for Age",
+       title=expression(paste("Prior Sensitivity Analysis for Age Slope of ", italic(f)[o]))) +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 15))
+slope_prior_robustness_F0_plot
+
+
+ER_slope_prior_robustness_F0_plot <- 
+  ggplot() +
+  geom_vline(xintercept = 0.05, alpha = 0.7, linetype = 2) +
+  geom_point(data = slope_prior_robustness_F0, aes(x=priSD, y=evidence_ratio), 
+             size = 3, color = "black") +
+  geom_point(data = slope_prior_robustness_F0, aes(x=priSD, y=evidence_ratio), 
+             size = 2, color = "#FC4E07") +
+  labs(x="Standard Deviation of Prior for Age", 
+       y="Age < 0",
+       title=expression(paste("Prior Sensitivity Analysis - ER for Age Slope of ", italic(f)[o]))) +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 15))
+ER_slope_prior_robustness_F0_plot
+```
+
+```{r, eval=FALSE}
+#code to loop through sd of slope prior:
+priSD <- seq(0.005, 0.2, length.out = 10)
+priorsN <- priors1
+
+#create empty sets to store output of the loop:
+post_pred <- c()
+post_pred_lci <- c()
+post_pred_uci <- c()
+evidence_ratio <- c()
+
+for (i in 1:length(priSD)) {
+  priorsN[4,] <- set_prior(paste0("normal(0, ", priSD[i],")"), class = "b", coef = "Age_months")
+  model_for_loop <- brm(baseline_te,
+                        data   = data_VSA_final, 
+                        family = student, 
+                        prior  = priorsN, 
+                        sample_prior = T,
+                        warmup = 1000, 
+                        iter   = 5000, 
+                        cores  = 64,
+                        chains = 2,
+                        #backend = "cmdstanr",
+                        #threads = threading(2),
+                        save_pars = save_pars(all = TRUE),
+                        control = list(adapt_delta   = 0.99, 
+                                       max_treedepth = 15))
+  
+  post_preds <- spread_draws(model_for_loop, b_Age_months)
+  post_pred[i] <- median(post_preds$b_Age_months)
+  post_pred_lci[i] <- quantile(post_preds$b_Age_months, prob = 0.025)
+  post_pred_uci[i] <- quantile(post_preds$b_Age_months, prob = 0.975)
+  evidence_ratio[i] <- hypothesis(model_for_loop, "Age_months < 0")$hypothesis$Evid.Ratio
+}
+
+slope_prior_robustness_VSA <- data.frame(priSD, post_pred, post_pred_lci, post_pred_uci, evidence_ratio)
+write.csv(slope_prior_robustness_VSA, file = 'robustness_tests/slope_prior_robustness_VSA.csv')
+```
+
+```{r}
+slope_prior_robustness_VSA <- read.csv('robustness_tests/slope_prior_robustness_VSA.csv')
+
+slope_prior_robustness_VSA_plot <- 
+  ggplot() +
+  geom_vline(xintercept = 0.05, alpha = 0.7, linetype = 2) +
+  geom_point(data = slope_prior_robustness_VSA, aes(x=priSD, y=post_pred), 
+             size = 3, color = "black") +
+  geom_point(data = slope_prior_robustness_VSA, aes(x=priSD, y=post_pred), 
+             size = 2, color = "#FC4E07") +
+  geom_errorbar(data = slope_prior_robustness_VSA, aes(x = priSD, ymin = post_pred_lci, 
+                                                       ymax = post_pred_uci), color = "steelblue") +
+  labs(x="Standard Deviation of Prior for Age", 
+       y="Posterior Estimate for Age",
+       title="Prior Sensitivity Analysis for Age Slope of Vowel Space Area") +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 14))
+slope_prior_robustness_VSA_plot
+
+ER_slope_prior_robustness_VSA_plot <- 
+  ggplot() +
+  geom_vline(xintercept = 0.05, alpha = 0.7, linetype = 2) +
+  geom_point(data = slope_prior_robustness_VSA, aes(x=priSD, y=evidence_ratio), 
+             size = 3, color = "black") +
+  geom_point(data = slope_prior_robustness_VSA, aes(x=priSD, y=evidence_ratio), 
+             size = 2, color = "#FC4E07") +
+  labs(x="Standard Deviation of Prior for Age", 
+       y="Age < 0",
+       title=expression(paste("Prior Sensitivity Analysis - ER for Age Slope of Vowel Space"))) +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 15))
+ER_slope_prior_robustness_VSA_plot
+```
+
+```{r, eval=FALSE}
+#code to loop through sd of slope prior:
+priSD <- seq(0.005, 0.2, length.out = 10)
+priorsN <- priors1
+
+#create empty sets to store output of the loop:
+post_pred <- c()
+post_pred_lci <- c()
+post_pred_uci <- c()
+evidence_ratio <- c()
+
+for (i in 1:length(priSD)) {
+  priorsN[4,] <- set_prior(paste0("normal(0, ", priSD[i],")"), class = "b", coef = "Age_months")
+  model_for_loop <- brm(baseline_e,
+                        data   = data_AR_final, 
+                        family = student, 
+                        prior  = priorsN, 
+                        sample_prior = T,
+                        warmup = 1000, 
+                        iter   = 5000, 
+                        cores  = 64,
+                        chains = 2,
+                        #backend = "cmdstanr",
+                        #threads = threading(2),
+                        save_pars = save_pars(all = TRUE),
+                        control = list(adapt_delta   = 0.99, 
+                                       max_treedepth = 15))
+  
+  post_preds <- spread_draws(model_for_loop, b_Age_months)
+  post_pred[i] <- median(post_preds$b_Age_months)
+  post_pred_lci[i] <- quantile(post_preds$b_Age_months, prob = 0.025)
+  post_pred_uci[i] <- quantile(post_preds$b_Age_months, prob = 0.975)
+  evidence_ratio[i] <- hypothesis(model_for_loop, "Age_months > 0")$hypothesis$Evid.Ratio
+}
+
+slope_prior_robustness_AR <- data.frame(priSD, post_pred, post_pred_lci, post_pred_uci, evidence_ratio)
+write.csv(slope_prior_robustness_AR, file = 'robustness_tests/slope_prior_robustness_AR.csv')
+```
+
+```{r}
+slope_prior_robustness_AR <- read.csv('robustness_tests/slope_prior_robustness_AR.csv')
+
+slope_prior_robustness_AR_plot <- 
+  ggplot() +
+  geom_vline(xintercept = 0.05, alpha = 0.7, linetype = 2) +
+  geom_point(data = slope_prior_robustness_AR, aes(x=priSD, y=post_pred), 
+             size = 3, color = "black") +
+  geom_point(data = slope_prior_robustness_AR, aes(x=priSD, y=post_pred), 
+             size = 2, color = "#FC4E07") +
+  geom_errorbar(data = slope_prior_robustness_AR, aes(x = priSD, ymin = post_pred_lci, 
+                                                      ymax = post_pred_uci), color = "steelblue") +
+  labs(x="Standard Deviation of Prior for Age", 
+       y="Posterior Estimate for Age",
+       title="Prior Sensitivity Analysis for Age Slope of Articulation Rate") +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 15))
+slope_prior_robustness_AR_plot
+
+ER_slope_prior_robustness_AR_plot <- 
+  ggplot() +
+  geom_vline(xintercept = 0.05, alpha = 0.7, linetype = 2) +
+  geom_point(data = slope_prior_robustness_AR, aes(x=priSD, y=evidence_ratio), 
+             size = 3, color = "black") +
+  geom_point(data = slope_prior_robustness_AR, aes(x=priSD, y=evidence_ratio), 
+             size = 2, color = "#FC4E07") +
+  labs(x="Standard Deviation of Prior for Age", 
+       y="Age > 0",
+       title=expression(paste("Prior Sensitivity Analysis - ER for Age Slope of Articulation Rate"))) +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 15))
+ER_slope_prior_robustness_AR_plot
+```
+
+```{r, eval=FALSE}
+#code to loop through sd of slope prior:
+priSD <- seq(0.005, 0.2, length.out = 10)
+priorsN <- priors1
+
+#create empty sets to store output of the loop:
+post_pred <- c()
+post_pred_lci <- c()
+post_pred_uci <- c()
+evidence_ratio <- c()
+
+for (i in 1:length(priSD)) {
+  priorsN[4,] <- set_prior(paste0("normal(0, ", priSD[i],")"), class = "b", coef = "Age_months")
+  model_for_loop <- brm(baseline_te,
+                        data   = data_VD_final, 
+                        family = student, 
+                        prior  = priorsN, 
+                        sample_prior = T,
+                        warmup = 1000, 
+                        iter   = 5000, 
+                        cores  = 2,
+                        chains = 2,
+                        #backend = "cmdstanr",
+                        #threads = threading(2),
+                        save_pars = save_pars(all = TRUE),
+                        control = list(adapt_delta   = 0.99, 
+                                       max_treedepth = 15))
+  
+  post_preds <- spread_draws(model_for_loop, b_Age_months)
+  post_pred[i] <- median(post_preds$b_Age_months)
+  post_pred_lci[i] <- quantile(post_preds$b_Age_months, prob = 0.025)
+  post_pred_uci[i] <- quantile(post_preds$b_Age_months, prob = 0.975)
+  evidence_ratio[i] <- hypothesis(model_for_loop, "Age_months < 0")$hypothesis$Evid.Ratio
+}
+
+slope_prior_robustness_VD <- data.frame(priSD, post_pred, post_pred_lci, post_pred_uci, evidence_ratio)
+write.csv(slope_prior_robustness_VD, file = 'robustness_tests/slope_prior_robustness_VD.csv')
+```
+
+```{r}
+slope_prior_robustness_VD <- read.csv('robustness_tests/slope_prior_robustness_VD.csv')
+
+slope_prior_robustness_VD_plot <- 
+  ggplot() +
+  geom_vline(xintercept = 0.05, alpha = 0.7, linetype = 2) +
+  geom_point(data = slope_prior_robustness_VD, aes(x=priSD, y=post_pred), 
+             size = 3, color = "black") +
+  geom_point(data = slope_prior_robustness_VD, aes(x=priSD, y=post_pred), 
+             size = 2, color = "#FC4E07") +
+  geom_errorbar(data = slope_prior_robustness_VD, aes(x = priSD, ymin = post_pred_lci, 
+                                                      ymax = post_pred_uci), color = "steelblue") +
+  labs(x="Standard Deviation of Prior for Age", 
+       y="Posterior Estimate for Age",
+       title="Prior Sensitivity Analysis for Age Slope of Vowel Duration") +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 15))
+slope_prior_robustness_VD_plot
+
+ER_slope_prior_robustness_VD_plot <- 
+  ggplot() +
+  geom_vline(xintercept = 0.05, alpha = 0.7, linetype = 2) +
+  geom_point(data = slope_prior_robustness_VD, aes(x=priSD, y=evidence_ratio), 
+             size = 3, color = "black") +
+  geom_point(data = slope_prior_robustness_VD, aes(x=priSD, y=evidence_ratio), 
+             size = 2, color = "#FC4E07") +
+  labs(x="Standard Deviation of Prior for Age", 
+       y="Age < 0",
+       title=expression(paste("Prior Sensitivity Analysis - ER for Age Slope of Vowel Duration"))) +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 15))
+ER_slope_prior_robustness_VD_plot
+```
+
+```{r, eval=FALSE}
+#code to loop through sd of slope prior:
+priSD <- seq(0.005, 0.2, length.out = 10)
+priorsN <- priors1
+
+#create empty sets to store output of the loop:
+post_pred <- c()
+post_pred_lci <- c()
+post_pred_uci <- c()
+evidence_ratio <- c()
+
+for (i in 1:length(priSD)) {
+  priorsN[4,] <- set_prior(paste0("normal(0, ", priSD[i],")"), class = "b", coef = "Age_months")
+  model_for_loop <- brm(baseline_te,
+                        data   = data_F0V_final, 
+                        family = student, 
+                        prior  = priorsN, 
+                        sample_prior = T,
+                        warmup = 1000, 
+                        iter   = 5000, 
+                        cores  = 64,
+                        chains = 2,
+                        #backend = "cmdstanr",
+                        #threads = threading(2),
+                        save_pars = save_pars(all = TRUE),
+                        control = list(adapt_delta   = 0.99, 
+                                       max_treedepth = 15))
+  
+  post_preds <- spread_draws(model_for_loop, b_Age_months)
+  post_pred[i] <- median(post_preds$b_Age_months)
+  post_pred_lci[i] <- quantile(post_preds$b_Age_months, prob = 0.025)
+  post_pred_uci[i] <- quantile(post_preds$b_Age_months, prob = 0.975)
+  evidence_ratio[i] <- hypothesis(model_for_loop, "Age_months > 0")$hypothesis$Evid.Ratio
+}
+
+slope_prior_robustness_F0V <- data.frame(priSD, post_pred, post_pred_lci, post_pred_uci, evidence_ratio)
+write.csv(slope_prior_robustness_F0V, file = 'robustness_tests/slope_prior_robustness_F0V.csv')
+```
+
+```{r}
+slope_prior_robustness_F0V <- read.csv('robustness_tests/slope_prior_robustness_F0V.csv')
+
+slope_prior_robustness_F0V_plot <- 
+  ggplot() +
+  geom_vline(xintercept = 0.05, alpha = 0.7, linetype = 2) +
+  geom_point(data = slope_prior_robustness_F0V, aes(x=priSD, y=post_pred), 
+             size = 3, color = "black") +
+  geom_point(data = slope_prior_robustness_F0V, aes(x=priSD, y=post_pred), 
+             size = 2, color = "#FC4E07") +
+  geom_errorbar(data = slope_prior_robustness_F0V, aes(x = priSD, ymin = post_pred_lci, 
+                                                       ymax = post_pred_uci), color = "steelblue") +
+  labs(x="Standard Deviation of Prior for Age", 
+       y="Posterior Estimate for Age",
+       title=expression(paste("Prior Sensitivity Analysis for Age Slope of ", 
+                              italic(f)[o], " Variability"))) +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 15))
+slope_prior_robustness_F0V_plot
+
+ER_slope_prior_robustness_F0V_plot <- 
+  ggplot() +
+  geom_vline(xintercept = 0.05, alpha = 0.7, linetype = 2) +
+  geom_point(data = slope_prior_robustness_F0V, aes(x=priSD, y=evidence_ratio), 
+             size = 3, color = "black") +
+  geom_point(data = slope_prior_robustness_F0V, aes(x=priSD, y=evidence_ratio), 
+             size = 2, color = "#FC4E07") +
+  labs(x="Standard Deviation of Prior for Age", 
+       y="Age > 0",
+       title=expression(paste("Prior Sensitivity Analysis - ER for Age Slope of ", 
+                              italic(f)[o], " Variability"))) +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 15))
+ER_slope_prior_robustness_F0V_plot
+```
+
+
+18: Prior Robustness Checks for Intercepts
+---------------
+```{r, eval = FALSE}
+priors1 <- c(prior(normal(0, 2.5), class = Intercept),
+             prior(normal(1, 1), class = sd),
+             prior(normal(0, 1), class = b),
+             prior(normal(0, 0.05), class = b, coef = "Age_months"),
+             prior(gamma(2, 0.1), class = nu))
+
+#code to loop through sd of intercept prior:
+priSD <- seq(0.1, 4, length.out = 10)
+priorsN <- priors1
+
+#create empty sets to store output of the loop:
+post_pred <- c()
+post_pred_lci <- c()
+post_pred_uci <- c()
+evidence_ratio <- c()
+
+data_F0_final_report <- data_F0_final %>%
+  select(Study, Language, Task, Environment, Age_months, Effect_Size, 
+         Effect_Size_se, measurement_num, id_site) %>%
+  drop_na() %>%
+  mutate(Age_months = center_scale(Age_months)) %>%
+  mutate(Language = str_replace_all(Language, "[^[:alnum:]]", ""))
+  
+for (i in 1:length(priSD)) {
+  priorsN[1,] <- set_prior(paste0("normal(0, ", priSD[i],")"), class = "Intercept")
+  model_for_loop <- brm(
+    baseline_te,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0_final_report, 
+    family = student,
+    prior = priorsN,
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+  model_for_loop
+  post_preds <- hypothesis(model_for_loop, "((Intercept*32 + LanguageBislama + LanguageBritishEnglish +
+  LanguageCanadianEnglish + LanguageDanish + LanguageDutch + LanguageEnga + LanguageFinnishSwedish + LanguageFrench +
+  LanguageGerman + LanguageHungarian + LanguageItalian + LanguageJamaicanEnglish + LanguageJapanese + LanguageKannada +
+  LanguageKenyanFijian + LanguageKorean + LanguageMandarinChinese + LanguageMbendjele + LanguageMentawai + 
+  LanguageNewZealandEnglish + LanguageNorwegian + LanguageNyangatom + LanguagePolish + LanguageQuechuaAchuar + 
+  LanguageQuicheMayan + LanguageSpanish + LanguageSriLankanTamil + LanguageSwedish + LanguageTagalog + LanguageToposa + 
+  LanguageTsimane + LanguageUSEnglish + Taskspontaneousspeech + Environmentnaturalistic)/32) > 0")
+  
+  post_pred[i] <- post_preds$hypothesis$Estimate
+  post_pred_lci[i] <- post_preds$hypothesis$CI.Lower
+  post_pred_uci[i] <- post_preds$hypothesis$CI.Upper
+  evidence_ratio[i] <- post_preds$hypothesis$Evid.Ratio
+}
+
+intercept_prior_robustness_F0 <- data.frame(priSD, post_pred, post_pred_lci, post_pred_uci, evidence_ratio)
+write.csv(intercept_prior_robustness_F0, file = 'robustness_tests/intercept_prior_robustness_F0.csv')
+```
+
+```{r}
+intercept_prior_robustness_F0 <- read.csv('robustness_tests/intercept_prior_robustness_F0.csv')
+
+intercept_prior_robustness_F0_plot <- 
+  ggplot() +
+  geom_vline(xintercept = 2.5, alpha = 0.7, linetype = 2) +
+  geom_point(data = intercept_prior_robustness_F0, aes(x=priSD, y=post_pred), size = 3, color = "black") +
+  geom_point(data = intercept_prior_robustness_F0, aes(x=priSD, y=post_pred), size = 2, color = "#FC4E07") +
+  geom_errorbar(data = intercept_prior_robustness_F0, aes(x = priSD, ymin = post_pred_lci, ymax = post_pred_uci), color = "steelblue") +
+  labs(x="Standard Deviation of Prior for Intercept", 
+       y="Posterior Estimate for Intercept",
+       title=expression(paste("Prior Sensitivity Analysis for Intercept of ", italic(f)[o]))) +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 15))
+intercept_prior_robustness_F0_plot
+
+intercept_prior_robustness_F0 <- intercept_prior_robustness_F0 %>%
+  mutate(evidence_ratio = as.factor(evidence_ratio))
+  
+ER_intercept_prior_robustness_F0_plot <- 
+  ggplot() +
+  geom_vline(xintercept = 2.5, alpha = 0.7, linetype = 2) +
+  geom_point(data = intercept_prior_robustness_F0, aes(x=priSD, y=evidence_ratio), 
+             size = 3, color = "black") +
+  geom_point(data = intercept_prior_robustness_F0, aes(x=priSD, y=evidence_ratio), 
+             size = 2, color = "#FC4E07") +
+  labs(x="Standard Deviation of Prior for Intercept", 
+       y="Intercept > 0",
+       title=expression(paste("Prior Sensitivity Analysis - ER for Intercept of ", 
+                              italic(f)[o]))) +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 15))
+ER_intercept_prior_robustness_F0_plot
+```
+
+```{r, eval = FALSE}
+#code to loop through sd of intercept prior:
+priSD <- seq(0.1, 4, length.out = 10)
+priorsN <- priors1
+
+#create empty sets to store output of the loop:
+post_pred <- c()
+post_pred_lci <- c()
+post_pred_uci <- c()
+evidence_ratio <- c()
+
+data_VSA_final_report <- data_VSA_final %>%
+  select(Study, Language, Environment, Task, Age_months, Effect_Size, Effect_Size_se, measurement_num, id_site) %>%
+  drop_na() %>%
+  mutate(Age_months = center_scale(Age_months)) %>%
+  mutate(Language = str_replace_all(Language, "[^[:alnum:]]", ""))
+
+for (i in 1:length(priSD)) {
+  priorsN[1,] <- set_prior(paste0("normal(0, ", priSD[i],")"), class = "Intercept")
+  model_for_loop <- brm(
+    baseline_e,
+    save_pars = save_pars(all = TRUE),
+    data = data_VSA_final_report, 
+    family = student,
+    prior = priorsN,
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+  
+  post_preds <- hypothesis(model_for_loop, "((Intercept*30 + LanguageBislama + 
+                           LanguageBritishEnglish + LanguageCanadianEnglish + 
+                           LanguageCantoneseChinese + LanguageDanish + LanguageDutch + 
+                           LanguageEnga + LanguageFinnishSwedish + LanguageFrench + 
+                           LanguageGerman + LanguageHungarian + LanguageJamaicanEnglish + 
+                           LanguageJapanese + LanguageKannada + LanguageMandarinChinese + 
+                           LanguageMbendjele + LanguageMentawai + LanguageNewZealandEnglish + 
+                           LanguageNorwegian + LanguageNyangatom + LanguagePolish + 
+                           LanguageQuechua + LanguageQuechuaAchuar + LanguageRussian + 
+                           LanguageSpanish + LanguageSwedish + LanguageToposa + 
+                           LanguageTsimane + LanguageUSEnglish + Environmentnaturalistic) / 30) > 0")
+  post_pred[i] <- post_preds$hypothesis$Estimate
+  post_pred_lci[i] <- post_preds$hypothesis$CI.Lower
+  post_pred_uci[i] <- post_preds$hypothesis$CI.Upper
+  evidence_ratio[i] <- post_preds$hypothesis$Evid.Ratio
+}
+
+intercept_prior_robustness_VSA <- data.frame(priSD, post_pred, post_pred_lci, post_pred_uci, evidence_ratio)
+write.csv(intercept_prior_robustness_VSA, file = 'robustness_tests/intercept_prior_robustness_VSA.csv')
+```
+
+```{r}
+intercept_prior_robustness_VSA <- read.csv('robustness_tests/intercept_prior_robustness_VSA.csv')
+
+intercept_prior_robustness_VSA_plot <- 
+  ggplot() +
+  geom_vline(xintercept = 2.5, alpha = 0.7, linetype = 2) +
+  geom_point(data = intercept_prior_robustness_VSA, aes(x=priSD, y=post_pred), size = 3, color = "black") +
+  geom_point(data = intercept_prior_robustness_VSA, aes(x=priSD, y=post_pred), size = 2, color = "#FC4E07") +
+  geom_errorbar(data = intercept_prior_robustness_VSA, aes(x = priSD, ymin = post_pred_lci, ymax = post_pred_uci), color = "steelblue") +
+  labs(x="Standard Deviation of Prior for Intercept", 
+       y="Posterior Estimate for Intercept",
+       title="Prior Sensitivity Analysis for Intercept of Vowel Space Area") +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 15))
+intercept_prior_robustness_VSA_plot
+
+ER_intercept_prior_robustness_VSA_plot <- 
+  ggplot() +
+  geom_vline(xintercept = 2.5, alpha = 0.7, linetype = 2) +
+  geom_point(data = intercept_prior_robustness_VSA, aes(x=priSD, y=evidence_ratio), size = 3, color = "black") +
+  geom_point(data = intercept_prior_robustness_VSA, aes(x=priSD, y=evidence_ratio), size = 2, color = "#FC4E07") +
+  labs(x="Standard Deviation of Prior for Intercept", 
+       y="Intercept > 0",
+       title=expression(paste("Prior Sensitivity Analysis - ER for Intercept of Vowel Space"))) +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 15))
+ER_intercept_prior_robustness_VSA_plot
+```
+
+```{r, eval = FALSE}
+#code to loop through sd of intercept prior:
+priSD <- seq(0.1, 4, length.out = 10)
+priorsN <- priors1
+
+#create empty sets to store output of the loop:
+post_pred <- c()
+post_pred_lci <- c()
+post_pred_uci <- c()
+evidence_ratio <- c()
+
+data_AR_final_report <- data_AR_final %>%
+  select(Study, Language, Task, Environment, Age_months, Effect_Size, Effect_Size_se, measurement_num, id_site) %>%
+  drop_na() %>%
+  mutate(Age_months = center_scale(Age_months)) %>%
+  mutate(Language = str_replace_all(Language, "[^[:alnum:]]", ""))
+
+for (i in 1:length(priSD)) {
+  priorsN[1,] <- set_prior(paste0("normal(0, ", priSD[i],")"), class = "Intercept")
+  model_for_loop <- brm(
+    baseline_e,
+    save_pars = save_pars(all = TRUE),
+    data = data_AR_final_report, 
+    family = student,
+    prior = priorsN,
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+  post_preds <- hypothesis(model_for_loop, "((Intercept*16 + LanguageBislama + LanguageBritishEnglish + LanguageCanadianEnglish + LanguageCantoneseChinese + LanguageDanish + LanguageDutch + LanguageFrench + LanguageGerman + LanguageItalian + LanguageJapanese + LanguageKenyanFijian + LanguageKorean + LanguageMandarinChinese + LanguageSriLankanTamil + LanguageTagalog + LanguageUSEnglish + Environmentnaturalistic) / 16) < 0")
+  post_pred[i] <- post_preds$hypothesis$Estimate
+  post_pred_lci[i] <- post_preds$hypothesis$CI.Lower
+  post_pred_uci[i] <- post_preds$hypothesis$CI.Upper
+  evidence_ratio[i] <- post_preds$hypothesis$Evid.Ratio
+}
+
+intercept_prior_robustness_AR <- data.frame(priSD, post_pred, post_pred_lci, post_pred_uci, evidence_ratio)
+write.csv(intercept_prior_robustness_AR, file = 'robustness_tests/intercept_prior_robustness_AR.csv')
+```
+
+```{r}
+intercept_prior_robustness_AR <- read.csv('robustness_tests/intercept_prior_robustness_AR.csv')
+
+intercept_prior_robustness_AR_plot <- 
+  ggplot() +
+  geom_vline(xintercept = 2.5, alpha = 0.7, linetype = 2) +
+  geom_point(data = intercept_prior_robustness_AR, aes(x=priSD, y=post_pred), size = 3, color = "black") +
+  geom_point(data = intercept_prior_robustness_AR, aes(x=priSD, y=post_pred), size = 2, color = "#FC4E07") +
+  geom_errorbar(data = intercept_prior_robustness_AR, aes(x = priSD, ymin = post_pred_lci, ymax = post_pred_uci), color = "steelblue") +
+  labs(x="Standard Deviation of Prior for Intercept", 
+       y="Posterior Estimate for Intercept",
+       title="Prior Sensitivity Analysis for Intercept of Articulation Rate") +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 15))
+intercept_prior_robustness_AR_plot
+
+ER_intercept_prior_robustness_AR_plot <- 
+  ggplot() +
+  geom_vline(xintercept = 2.5, alpha = 0.7, linetype = 2) +
+  geom_point(data = intercept_prior_robustness_AR, aes(x=priSD, y=evidence_ratio), size = 3, color = "black") +
+  geom_point(data = intercept_prior_robustness_AR, aes(x=priSD, y=evidence_ratio), size = 2, color = "#FC4E07") +
+  labs(x="Standard Deviation of Prior for Intercept", 
+       y="Intercept < 0",
+       title=expression(paste("Prior Sensitivity Analysis - ER for Intercept of Articulation Rate"))) +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 15))
+ER_intercept_prior_robustness_AR_plot
+```
+
+```{r, eval = FALSE}
+#code to loop through sd of intercept prior:
+priSD <- seq(0.1, 4, length.out = 10)
+priorsN <- priors1
+
+#create empty sets to store output of the loop:
+post_pred <- c()
+post_pred_lci <- c()
+post_pred_uci <- c()
+evidence_ratio <- c()
+
+data_VD_final_report <- data_VD_final %>%
+  select(Study, Language, Environment, Task, Age_months, Effect_Size, Effect_Size_se, measurement_num, id_site) %>%
+  drop_na() %>%
+  mutate(Age_months = center_scale(Age_months)) %>%
+  mutate(Language = str_replace_all(Language, "[^[:alnum:]]", ""))
+
+for (i in 1:length(priSD)) {
+  priorsN[1,] <- set_prior(paste0("normal(0, ", priSD[i],")"), class = "Intercept")
+  model_for_loop <- brm(
+    baseline_f,
+    save_pars = save_pars(all = TRUE),
+    data = data_VD_final_report, 
+    family = student,
+    prior = priorsN,
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = 2,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+  
+  post_preds <- hypothesis(model_for_loop, "((Intercept*11 + LanguageBritishEnglish + LanguageCanadianEnglish + LanguageDanish + LanguageJamaicanEnglish + LanguageJapanese + LanguageMandarinChinese + LanguageNorwegian + LanguageScottishEnglish + LanguageSwedish + LanguageUSEnglish) / 11) > 0")
+  post_pred[i] <- post_preds$hypothesis$Estimate
+  post_pred_lci[i] <- post_preds$hypothesis$CI.Lower
+  post_pred_uci[i] <- post_preds$hypothesis$CI.Upper
+  evidence_ratio[i] <- post_preds$hypothesis$Evid.Ratio
+}
+
+intercept_prior_robustness_VD <- data.frame(priSD, post_pred, post_pred_lci, post_pred_uci, evidence_ratio)
+write.csv(intercept_prior_robustness_VD, file = 'robustness_tests/intercept_prior_robustness_VD.csv')
+```
+
+```{r}
+intercept_prior_robustness_VD <- read.csv('robustness_tests/intercept_prior_robustness_VD.csv')
+
+intercept_prior_robustness_VD_plot <- 
+  ggplot() +
+  geom_vline(xintercept = 2.5, alpha = 0.7, linetype = 2) +
+  geom_point(data = intercept_prior_robustness_VD, aes(x=priSD, y=post_pred), size = 3, color = "black") +
+  geom_point(data = intercept_prior_robustness_VD, aes(x=priSD, y=post_pred), size = 2, color = "#FC4E07") +
+  geom_errorbar(data = intercept_prior_robustness_VD, aes(x = priSD, ymin = post_pred_lci, ymax = post_pred_uci), color = "steelblue") +
+  labs(x="Standard Deviation of Prior for Intercept", 
+       y="Posterior Estimate for Intercept",
+       title="Prior Sensitivity Analysis for Intercept of Vowel Duration") +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 15))
+intercept_prior_robustness_VD_plot
+
+ER_intercept_prior_robustness_VD_plot <- 
+  ggplot() +
+  geom_vline(xintercept = 2.5, alpha = 0.7, linetype = 2) +
+  geom_point(data = intercept_prior_robustness_VD, aes(x=priSD, y=evidence_ratio), size = 3, color = "black") +
+  geom_point(data = intercept_prior_robustness_VD, aes(x=priSD, y=evidence_ratio), size = 2, color = "#FC4E07") +
+  labs(x="Standard Deviation of Prior for Intercept", 
+       y="Intercept > 0",
+       title=expression(paste("Prior Sensitivity Analysis - ER for Intercept of Vowel Duration"))) +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 15))
+ER_intercept_prior_robustness_VD_plot
+```
+
+```{r, eval = FALSE}
+#code to loop through sd of intercept prior:
+priSD <- seq(0.1, 4, length.out = 10)
+priorsN <- priors1
+
+#create empty sets to store output of the loop:
+post_pred <- c()
+post_pred_lci <- c()
+post_pred_uci <- c()
+evidence_ratio <- c()
+
+data_F0V_final_report <- data_F0V_final %>%
+  select(Study, Language, Environment, Task, Age_months, Effect_Size, Effect_Size_se, measurement_num, id_site) %>%
+  drop_na() %>%
+  mutate(Age_months = center_scale(Age_months)) %>%
+  mutate(Language = str_replace_all(Language, "[^[:alnum:]]", ""))
+
+for (i in 1:length(priSD)) {
+  priorsN[1,] <- set_prior(paste0("normal(0, ", priSD[i],")"), class = "Intercept")
+  model_for_loop <- brm(
+    baseline_t,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0V_final_report, 
+    family = student,
+    prior = priorsN,
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+  
+  post_preds <- hypothesis(model_for_loop, "((Intercept*33 + LanguageBislama + LanguageBritishEnglish + LanguageCanadianEnglish + LanguageCantoneseChinese + LanguageDanish + LanguageDutch + LanguageEnga + LanguageFinnishSwedish + LanguageFrench + LanguageGerman + LanguageHungarian + LanguageItalian + LanguageJapanese + LanguageKannada + LanguageKenyanFijian + LanguageKorean + LanguageMandarinChinese + LanguageMbendjele + LanguageMentawai + LanguageNewZealandEnglish + LanguageNorwegian + LanguageNyangatom + LanguagePolish + LanguageQuechua + LanguageQuechuaAchuar + LanguageScottishEnglish + LanguageSpanish + LanguageSriLankanTamil + LanguageSwedish + LanguageTagalog + LanguageToposa + LanguageTsimane + LanguageUSEnglish + Taskspontaneousspeech) / 33) > 0")
+  post_pred[i] <- post_preds$hypothesis$Estimate
+  post_pred_lci[i] <- post_preds$hypothesis$CI.Lower
+  post_pred_uci[i] <- post_preds$hypothesis$CI.Upper
+  evidence_ratio[i] <- post_preds$hypothesis$Evid.Ratio
+}
+
+intercept_prior_robustness_F0V <- data.frame(priSD, post_pred, post_pred_lci, post_pred_uci, evidence_ratio)
+write.csv(intercept_prior_robustness_F0V, file = 'robustness_tests/intercept_prior_robustness_F0V.csv')
+```
+
+```{r}
+intercept_prior_robustness_F0V <- read.csv('robustness_tests/intercept_prior_robustness_F0V.csv')
+
+intercept_prior_robustness_F0V_plot <- 
+  ggplot() +
+  geom_vline(xintercept = 2.5, alpha = 0.7, linetype = 2) +
+  geom_point(data = intercept_prior_robustness_F0V, aes(x=priSD, y=post_pred), size = 3, color = "black") +
+  geom_point(data = intercept_prior_robustness_F0V, aes(x=priSD, y=post_pred), size = 2, color = "#FC4E07") +
+  geom_errorbar(data = intercept_prior_robustness_F0V, aes(x = priSD, ymin = post_pred_lci, ymax = post_pred_uci), color = "steelblue") +
+  labs(x="Standard Deviation of Prior for Intercept", 
+       y="Posterior Estimate for Intercept",
+       title=expression(paste("Prior Sensitivity Analysis for Intercept of ", italic(f)[o], " Variability"))) +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 15))
+intercept_prior_robustness_F0V_plot
+
+ER_intercept_prior_robustness_F0V_plot <- 
+  ggplot() +
+  geom_vline(xintercept = 2.5, alpha = 0.7, linetype = 2) +
+  geom_point(data = intercept_prior_robustness_F0V, aes(x=priSD, y=evidence_ratio), size = 3, color = "black") +
+  geom_point(data = intercept_prior_robustness_F0V, aes(x=priSD, y=evidence_ratio), size = 2, color = "#FC4E07") +
+  labs(x="Standard Deviation of Prior for Intercept", 
+       y="Intercept > 0",
+       title=expression(paste("Prior Sensitivity Analysis - ER for Intercept of ", italic(f)[o], " Variability"))) +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 15))
+ER_intercept_prior_robustness_F0V_plot
+```
+
+19: Robustness Checks Plots
+---------------
+
+```{r}
+#Create Panel with all of the prior sensitivity plots:
+sensitivity_plot_age <- 
+  plot_grid(slope_prior_robustness_F0_plot,
+            slope_prior_robustness_F0V_plot,
+            slope_prior_robustness_VSA_plot,
+            slope_prior_robustness_AR_plot,
+            slope_prior_robustness_VD_plot,
+          ncol = 1)
+
+sensitivity_plot_intercept <- 
+  plot_grid(intercept_prior_robustness_F0_plot,
+            intercept_prior_robustness_F0V_plot,
+            intercept_prior_robustness_VSA_plot,
+            intercept_prior_robustness_AR_plot,
+            intercept_prior_robustness_VD_plot,
+            ncol = 1)
+
+ER_sensitivity_plot_age <- 
+  plot_grid(ER_slope_prior_robustness_F0_plot,
+            ER_slope_prior_robustness_F0V_plot,
+            ER_slope_prior_robustness_VSA_plot,
+            ER_slope_prior_robustness_AR_plot,
+            ER_slope_prior_robustness_VD_plot,
+          ncol = 1)
+
+ER_sensitivity_plot_intercept <- 
+  plot_grid(ER_intercept_prior_robustness_F0_plot,
+            ER_intercept_prior_robustness_F0V_plot,
+            ER_intercept_prior_robustness_VSA_plot,
+            ER_intercept_prior_robustness_AR_plot,
+            ER_intercept_prior_robustness_VD_plot,
+            ncol = 1)
+
+sensitivity_plot_all <- plot_grid(sensitivity_plot_intercept, 
+                                  sensitivity_plot_age, 
+                                  ncol = 2)
+
+ER_sensitivity_plot_all <- plot_grid(ER_sensitivity_plot_intercept, 
+                                     ER_sensitivity_plot_age,
+                                     ncol = 2)
+```
+
+20: Models to report average effect size across languages & scaled age
+---------------
+
+```{r}
+center_scale <- function(x) {
+  scale(x, center = TRUE, scale = TRUE)}
+
+data_F0_final_report <- data_F0_final %>%
+  select(Study, Language, Task, Environment, Age_months, Effect_Size, Effect_Size_se, measurement_num, id_site) %>%
+  drop_na() %>%
+  mutate(Age_months = center_scale(Age_months)) %>%
+  mutate(Language = str_replace_all(Language, "[^[:alnum:]]", ""))
+
+F0_task_environment_language_age_report <- 
+  brm(
+    baseline_te,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0_final_report, 
+    family = student,
+    prior = priors1,
+    file = here("models", "F0_task_environment_language_age_report"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+summary(F0_task_environment_language_age_report)
+
+post_preds <- hypothesis(F0_task_environment_language_age_report, "((Intercept*32 + 
+LanguageBislama + LanguageBritishEnglish + LanguageBritishEnglish + LanguageCanadianEnglish + 
+LanguageDanish + LanguageDutch + LanguageEnga + LanguageFinnishSwedish + LanguageFrench +
+LanguageGerman + LanguageHungarian + LanguageItalian + LanguageJamaicanEnglish + LanguageJapanese + LanguageKannada +
+LanguageKenyanFijian + LanguageKorean + LanguageMandarinChinese + LanguageMbendjele + LanguageMentawai +
+LanguageNewZealandEnglish + LanguageNorwegian + LanguageNyangatom + LanguagePolish + LanguageQuechuaAchuar +
+LanguageQuicheMayan + LanguageSpanish + LanguageSriLankanTamil + LanguageSwedish + LanguageTagalog + LanguageToposa +
+LanguageTsimane + LanguageUSEnglish + Taskspontaneousspeech + Environmentnaturalistic)/32) > 0")
+
+post_preds
+
+data_VSA_final_report <- data_VSA_final %>%
+  select(Study, Language, Environment, Task, Age_months, Effect_Size, Effect_Size_se, measurement_num, id_site) %>%
+  drop_na() %>%
+  mutate(Age_months = center_scale(Age_months)) %>%
+  mutate(Language = str_replace_all(Language, "[^[:alnum:]]", ""))
+
+VSA_environment_report <- 
+  brm(
+    baseline_e,
+    save_pars = save_pars(all = TRUE),
+    data = data_VSA_final_report, 
+    family = student,
+    prior = priors1,
+    file = "models/VSA_environment_report",
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+summary(VSA_environment_report)
+
+post_preds <- hypothesis(VSA_environment_report, "((Intercept*30 + LanguageBislama + 
+                         LanguageBritishEnglish + LanguageCanadianEnglish + 
+                         LanguageCantoneseChinese + LanguageDanish + LanguageDutch + 
+                         LanguageEnga + LanguageFinnishSwedish + LanguageFrench + 
+                         LanguageGerman + LanguageHungarian + LanguageJamaicanEnglish + 
+                         LanguageJapanese + LanguageKannada + LanguageMandarinChinese + 
+                         LanguageMbendjele + LanguageMentawai + LanguageNewZealandEnglish + 
+                         LanguageNorwegian + LanguageNyangatom + LanguagePolish + 
+                         LanguageQuechua + LanguageQuechuaAchuar + LanguageRussian + 
+                         LanguageSpanish + LanguageSwedish + LanguageToposa + LanguageTsimane + 
+                         LanguageUSEnglish + Environmentnaturalistic) / 30) > 0")
+
+post_preds
+
+data_AR_final_report <- data_AR_final %>%
+  select(Study, Language, Task, Environment, Age_months, Effect_Size, Effect_Size_se, measurement_num) %>%
+  drop_na() %>%
+  mutate(Age_months = center_scale(Age_months)) %>%
+  mutate(Language = str_replace_all(Language, "[^[:alnum:]]", ""))
+
+AR_task_report <- 
+  brm(
+    baseline_e,
+    save_pars = save_pars(all = TRUE),
+    data = data_AR_final_report, 
+    family = student,
+    prior = priors1,
+    file = "models/AR_task_report",
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+summary(AR_task_report)
+post_preds <- hypothesis(AR_task_report, "((Intercept*17 + LanguageBislama + LanguageBritishEnglish + LanguageCanadianEnglish + 
+           LanguageCantoneseChinese + LanguageDanish + LanguageDutch + LanguageFrench + LanguageGerman + LanguageItalian + 
+           LanguageJapanese + LanguageKenyanFijian + LanguageKorean + LanguageMandarinChinese + LanguageSriLankanTamil + 
+           LanguageTagalog + LanguageUSEnglish) / 17) < 0")
+
+post_preds
+
+data_VD_final_report <- data_VD_final %>%
+  select(Study, Language, Environment, Task, Age_months, Effect_Size, Effect_Size_se, measurement_num) %>%
+  drop_na() %>%
+  mutate(Age_months = center_scale(Age_months)) %>%
+  mutate(Language = str_replace_all(Language, "[^[:alnum:]]", ""))
+
+VD_age_language_report <- 
+  brm(
+    baseline_f,
+    save_pars = save_pars(all = TRUE),
+    data = data_VD_final_report, 
+    family = student,
+    prior = priors1,
+    file = here("models", "VD_age_language_report"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+summary(VD_age_language_report)
+
+post_preds <- hypothesis(VD_age_language_report, "((Intercept*11 + LanguageBritishEnglish + LanguageCanadianEnglish + LanguageDanish + LanguageJamaicanEnglish + 
+           LanguageJapanese + LanguageMandarinChinese + LanguageNorwegian + LanguageScottishEnglish + LanguageSwedish + 
+           LanguageUSEnglish) / 11) > 0")
+
+post_preds
+
+data_F0V_final_report <- data_F0V_final %>%
+  select(Study, Language, Environment, Task, Age_months, Effect_Size, Effect_Size_se, measurement_num) %>%
+  drop_na() %>%
+  mutate(Age_months = center_scale(Age_months)) %>%
+  mutate(Language = str_replace_all(Language, "[^[:alnum:]]", ""))
+
+F0V_task_report <- 
+  brm(
+    baseline_t,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0V_final_report, 
+    family = student,
+    prior = priors1,
+    file = "models/F0V_task_report",
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+
+summary(F0V_task_report)
+
+post_preds <- hypothesis(F0V_task_report, "((Intercept*22 + LanguageBislama + LanguageBritishEnglish + LanguageCanadianEnglish + LanguageCantoneseChinese + LanguageDanish + LanguageDutch + LanguageFrench + LanguageGerman + LanguageHungarian + 
+LanguageItalian + LanguageJapanese + LanguageKenyanFijian + LanguageKorean + LanguageMandarinChinese + 
+LanguageNorwegian + LanguageScottishEnglish + LanguageSriLankanTamil + LanguageSwedish + LanguageTagalog + LanguageUSEnglish + Taskspontaneousspeech) / 22) > 0")
+
+post_preds
+```
+
+
+21: Model Comparison
+---------------
+```{r, eval = FALSE}
+options(future.globals.maxSize= +Inf)
+
+model_weights(F0_environment, F0_task, F0_task_environment_language_age, F0_age_language, F0_age, F0_language, F0_intercept, weights = "loo")
+model_weights(VSA_environment, VSA_task, VSA_task_environment_language_age, VSA_age_language, VSA_age, VSA_language, VSA_intercept, weights = "loo")
+model_weights(AR_environment, AR_task, AR_task_environment_language_age, AR_age_language, AR_age, AR_language, AR_intercept, weights = "loo")
+model_weights(VD_environment, VD_task, VD_task_environment_language_age, VD_age_language, VD_age, VD_language, VD_intercept, weights = "loo")
+model_weights(F0V_environment, F0V_task, F0V_task_environment_language_age, F0V_age_language, F0V_age, F0V_language, F0V_intercept, weights = "loo")
+```
+
+
+
+
