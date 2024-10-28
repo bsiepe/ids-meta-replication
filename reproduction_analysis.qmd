@@ -4197,30 +4197,55 @@ We use a function to compare point estimates of the original models to the repli
 
 ```{r, eval = FALSE}
 source("functions.R")
-diff_comp <- compare_point_ests("models", "models/replication",
-                                random_effects = TRUE)
+diff_comp <- compare_point_ests("models", "models/replication",           random_effects = TRUE)
 
 # remove all NA
 diff_comp_clean <- diff_comp[unlist(unname(lapply(diff_comp, function(x) !is.logical(x))))]
 
-df_diff_comp <- diff_comp_clean %>% 
-  bind_rows(., .id = "model")
+# df_diff_comp <- diff_comp_clean %>% 
+#   bind_rows(., .id = "model")
 
 
 # save resulting data frame
-saveRDS(df_diff_comp, here("output/replication/point_estimates_comparison.RDS"))
+saveRDS(diff_comp_clean, here("output/replication/estimates_comparison.RDS"))
 ```
 
 We reload the dataframe and show the results:
-```{r}
-df_diff_comp <- readRDS(here("output/replication/point_estimates_comparison.RDS"))
+```{r, eval = TRUE}
+diff_comp <- readRDS(here("output/replication/estimates_comparison.RDS"))
+```
+
+Present results for all fixed effects estimates:
+```{r, eval = TRUE}
+diff_point_estimates <- lapply(diff_comp, function(x) x$point_est)
+
+df_diff_point <- diff_point_estimates |> 
+  bind_rows(.id = "model") |> 
+  mutate(model = gsub(".rds", "", model)) |> 
+  mutate(model = gsub("_m", "", model))
+
+df_diff_point |> 
+  mutate(across(contains("Diff"),
+                ~round(., 4))) |> 
+  knitr::kable()
 ```
 
 
 
-In addition, we can compare random effect standard deviations:
-
+In addition, we can compare the random effects. Instead of looking at every individual random effect, we focus on the standard deviations of the random effects.
 ```{r, eval = TRUE}
+df_diff_random <- lapply(diff_comp, function(x){
+ x$random_effect |> 
+    filter(grepl("sd_", Parameter))
+}) |> 
+  bind_rows(.id = "model") |> 
+  mutate(model = gsub(".rds", "", model)) |> 
+  mutate(model = gsub("_m", "", model))
+
+df_diff_random |> 
+  mutate(across(contains("Diff"),
+                ~round(., 4))) |> 
+  knitr::kable()
 
 ```
 
