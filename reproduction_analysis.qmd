@@ -2335,25 +2335,45 @@ F0_conditional_effects <- plot_grid(c_eff_plot_age_F0, c_eff_plot_task_F0, c_eff
 c_eff_plot_F0 <- plot_grid(c_eff_plot_language_F0, F0_conditional_effects, ncol = 2)
 c_eff_plot_F0
 
+# BS: Added for reproduction
+ggsave("~/ids-meta-replication/figures/c_eff_plot_F0.pdf", c_eff_plot_F0,
+       height = 9, width = 9)
+
 #VSA:
 VSA_conditional_effects <- plot_grid(c_eff_plot_age_VSA, c_eff_plot_task_VSA, c_eff_plot_environment_VSA, ncol = 1)
 c_eff_plot_VSA <- plot_grid(c_eff_plot_language_VSA, VSA_conditional_effects, ncol = 2)
 c_eff_plot_VSA
+
+# BS: Added for reproduction
+ggsave("~/ids-meta-replication/figures/c_eff_plot_VSA.pdf", c_eff_plot_VSA,
+       height = 9, width = 9)
 
 #AR:
 AR_conditional_effects <- plot_grid(c_eff_plot_age_AR, c_eff_plot_task_AR, c_eff_plot_environment_AR, ncol = 1)
 c_eff_plot_AR <- plot_grid(c_eff_plot_language_AR, AR_conditional_effects, ncol = 2)
 c_eff_plot_AR
 
+# BS: Added for reproduction
+ggsave("~/ids-meta-replication/figures/c_eff_plot_AR.pdf", c_eff_plot_AR,
+       height = 9, width = 9)
+
 #VD:
 VD_conditional_effects <- plot_grid(c_eff_plot_age_VD, c_eff_plot_task_VD, c_eff_plot_environment_VD, ncol = 1)
 c_eff_plot_VD <- plot_grid(c_eff_plot_language_VD, VD_conditional_effects, ncol = 2)
 c_eff_plot_VD
 
+# BS: Added for reproduction
+ggsave("~/ids-meta-replication/figures/c_eff_plot_VD.pdf", c_eff_plot_VD,
+       height = 9, width = 9)
+
 #F0 Variability:
 F0V_conditional_effects <- plot_grid(c_eff_plot_age_F0V, c_eff_plot_task_F0V, c_eff_plot_environment_F0V, ncol = 1)
 c_eff_plot_F0V <- plot_grid(c_eff_plot_language_F0V, F0V_conditional_effects, ncol = 2)
 c_eff_plot_F0V
+
+# BS: Added for reproduction
+ggsave("~/ids-meta-replication/figures/c_eff_plot_F0V.pdf", c_eff_plot_F0V,
+       height = 9, width = 9)
 
 #Overview of age plots, Figure S6.6:
 c_eff_plot_age_F0_overview <- c_eff_plot_age_F0 +
