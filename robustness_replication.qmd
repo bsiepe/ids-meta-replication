@@ -491,11 +491,11 @@ data_F0_multiple_final <- readRDS(here("data/data_F0_multiple_final.RData"))
 baseline_te <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Age_months + 
                     Language + Environment + Task + (1 | Language/id_site/measurement_num))
 
-priors1 <- c(prior(normal(0, 2.5), class = Intercept),
-             prior(normal(1, 1), class = sd),
-             prior(normal(0, 1), class = b),
-             prior(normal(0, 0.05), class = b, coef = "Age_months"),
-             prior(gamma(2, 0.1), class = nu))
+priors1 <- c(brms::prior(normal(0, 2.5), class = Intercept),
+             brms::prior(normal(1, 1), class = sd),
+             brms::prior(normal(0, 1), class = b),
+             brms::prior(normal(0, 0.05), class = b, coef = "Age_months"),
+             brms::prior(gamma(2, 0.1), class = nu))
 
 F0_task_environment_language_age_m_sampler <- 
   brm_multiple(
@@ -539,7 +539,7 @@ bayesplot::mcmc_parcoord(F0_task_environment_language_age_m_sampler, np = np_F0,
 
 
 
-Compare results to the original model?
+Compare results to the original model
 
 ## VSA
 The authors selected the model with age & language as predictors as the best model.
@@ -570,14 +570,6 @@ VSA_age_language_m_sampler <-
       max_treedepth = 10 ))
 summary(VSA_age_language_m_sampler)
 pp_check(VSA_age_language_m_sampler, ndraws = 100)
-```
-
-As there were no divergent transitions, we compare point estimates to the replicated model using the sampler settings as specified by the authors: 
-```{r}
-source("functions.R")
-VSA_age_language_m <- readRDS(here("models/replication/VSA_age_language_m_rep.rds"))
-diff_point_est(VSA_age_language_m_sampler, VSA_age_language_m)
-
 ```
 
 
@@ -652,6 +644,14 @@ The authors selected the model with task, age & language as predictors as the be
 
 ```{r f0v-sampler}
 data_F0V_multiple_final <- readRDS(here("data/data_F0V_multiple_final.RData"))
+baseline_t <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Age_months + 
+                   Language + Task + (1 | Language/id_site/measurement_num))
+priors1 <- c(brms::prior(normal(0, 2.5), class = Intercept),
+             brms::prior(normal(1, 1), class = sd),
+             brms::prior(normal(0, 1), class = b),
+             brms::prior(normal(0, 0.05), class = b, coef = "Age_months"),
+             brms::prior(gamma(2, 0.1), class = nu))
+
 F0V_task_language_age_m_sampler <- 
   brm_multiple(
     baseline_t,
@@ -659,11 +659,11 @@ F0V_task_language_age_m_sampler <-
     data = data_F0V_multiple_final, 
     family = student,
     prior = priors1,
-    file = here("models", "replication", "sampler_check", "F0V_task_language_age_m_rep_sampler_test"),
+    file = here("models", "replication", "sampler_check", "F0V_task_language_age_m_rep_sampler_new"),
     sample_prior = T,
     iter = 5000, 
     warmup = 500,
-    cores = cores,
+    cores = 2,
     recompile = TRUE,
     chains = 2,
     #backend = "cmdstanr",
@@ -677,24 +677,39 @@ pp_check(F0V_task_language_age_m_sampler, ndraws = 100)
 
 ```
 
-As there were no divergent transitions, we compare point estimates to the original model: 
+We compare point estimates to the original model (i.e., or replication of it, because the original one was not available):
 
 ```{r f0v-comparison}
+# load original model
+F0V_task_langugae_age_m_rep <- readRDS("~/ids-meta-replication/models/replication/F0V_task_language_age_m_rep.rds")
+
+source("functions.R")
+diff_F0V <- diff_point_est(F0V_task_language_age_m_rep, F0V_task_language_age_m_sampler)
 
 ```
 
 
-## Check the models with different sampler settings
+Now we check convergence: 
+```{r}
+lp_F0V <- bayesplot::log_posterior(F0V_task_language_age_m_sampler)
+np_F0V <- bayesplot::nuts_params(F0V_task_language_age_m_sampler)
+bayesplot::mcmc_nuts_divergence(np_F0V, lp_F0V)
+```
+
+```{r}
+bayesplot::mcmc_parcoord(F0V_task_language_age_m_sampler, np = np_F0V, pars = c("Intercept","b_Age_months","b_LanguageBritishEnglish"))
+```
+
+```{r}
+bayesplot::mcmc_pairs(F0V_task_language_age_m_sampler, np = np_F0V, pars = c("Intercept","nu"))
+```
 
 
 
 
 
 
-# 4. Minor Things
-
-
-# 5. Session Info
+# 4. Session Info
 
 ```{r}
 pander::pander(sessionInfo())
