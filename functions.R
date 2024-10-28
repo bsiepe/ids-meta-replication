@@ -22,8 +22,6 @@ diff_point_est <- function(fit1,
 
 
 # Compare evidence ratio and random effects -------------------------------
-
-
 diff_random_effects <- function(fit1, 
                                 fit2,
                                 ...){
@@ -56,6 +54,8 @@ compare_point_ests <- function(original_folder,
                                replication_folder,
                                random_effects = FALSE,
                                server = TRUE){
+  # browser()
+  
   original_mods_full <- list.files(original_folder, pattern = ".rds", full.names = TRUE)
   # Exclude nonimputed and prior predictive files
   original_mods_full <- original_mods_full[!grepl("nonimputed", original_mods_full)]
@@ -69,17 +69,21 @@ compare_point_ests <- function(original_folder,
   
   
   replication_mods <- gsub("_m.rds", "_m_rep.rds", original_mods_full)
+  replication_mods <- gsub("_report.rds", "_report_rep.rds", replication_mods)
   replication_mods <- gsub("models/", "models/replication/", replication_mods)
   
   
   diff_list <- list()
   for (i in seq_along(original_mods_full)){
+    diff_list[[i]] <- list()
     original_mod <- readRDS(original_mods_full[i])
     replication_mod <- tryCatch({readRDS(replication_mods[i])}, error = function(e) NA)
     diff_list[[i]]$point_est <- tryCatch({diff_point_est(original_mod, replication_mod)}, error = function(e) NA)
-    names(diff_list)[i]$point_est <- original_mods[i]
+    if(all(!is.na(diff_list[[i]]$point_est))){
+      names(diff_list)[i] <- original_mods[i]
+    }
     if(isTRUE(random_effects)){
-      diff_list[[i]]$random_effect <- tryCatch({diff_random_effect(original_mod, replication_mod)}, error = function(e) NA)
+      diff_list[[i]]$random_effect <- tryCatch({diff_random_effects(original_mod, replication_mod)}, error = function(e) NA)
     }
     rm(original_mod)
     rm(replication_mod)
