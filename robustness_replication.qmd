@@ -32,7 +32,7 @@ execute:
   eval: false
 ---
 
-# 0. Preparation
+# Preparation
 Load the necessary packages and set the seed for reproducibility.
 ```{r setup}
 library(brms)
@@ -44,10 +44,12 @@ library(RoBMA)
 library(osfr)
 library(bayesplot)
 library(pander)
+library(knitr)
+library(xtable)
 set.seed(35032)
 ``` 
 
-# 1. Publication Bias 
+# Publication Bias 
 Here, we will use Robust Bayesian Meta-Analyses to fit an ensemble of meta-analytic models, which will then be averaged with Bayesian Model Averaging. These models also estimate a publication bias adjustment.
 https://fbartos.github.io/RoBMA/reference/RoBMA.reg.html
 ## F0
@@ -59,20 +61,12 @@ TODO how to deal with hedges g
 https://forum.cogsci.nl/discussion/7239/robma-random-effects-meta-analysis-with-meta-regression
 
 ### Intercept-Only
-```{r f0-robma}
+```{r f0-intercept-robma}
 data_F0 <- readRDS(here("data/data_F0_multiple_final.RData"))
 
-baseline_te <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Age_months + 
-                    Language + Environment + Task + (1 | Language/id_site/measurement_num))
 
-# priors1 <- c(prior(normal(0, 2.5), class = Intercept),
-#              prior(normal(1, 1), class = sd),
-#              prior(normal(0, 1), class = b),
-#              prior(normal(0, 0.05), class = b, coef = "Age_months"),
-#              prior(gamma(2, 0.1), class = nu))
 
 # TODO hedges g instead of d
-
 F0_pub_bias <- RoBMA(
       y = data_F0[[1]]$Effect_Size, 
       se = data_F0[[1]]$Effect_Size_se, 
@@ -81,10 +75,20 @@ F0_pub_bias <- RoBMA(
       parallel = TRUE, 
       seed = 35037)
 
-# Why is this a multivariate model?
+# TODO Why is this a multivariate model? 
 saveRDS(F0_pub_bias, file = here("output/replication/F0_pub_bias.RDS"))
+
 ```
-Regression
+
+Analyze the results:
+```{r f0-intercept-robma-summary}
+F0_pub_bias <- readRDS(here("output/replication/F0_pub_bias.RDS"))
+
+# summary(F0_pub_bias)
+
+# Obtain neat summary: 
+interpret(F0_pub_bias)
+```
 
 
 
@@ -122,8 +126,9 @@ The authors selected the model with task, age & language as predictors as the be
 
 
 
-# 2. Compare Rank-Order of Model Weights
+# Compare Rank-Order of Model Weights
 
+## (Re-)estimate Missing Models
 First estimate the missing models, using the same prior specification as used in the models with language as predictor, but using the same random effects as in all priors. It is unclear to us why the random effects structure was changed for language. 
 Environment as predictor: 
 ```{r}
@@ -341,8 +346,121 @@ F0V_task_m <-
 ```
 
 
-Now load in all relevant models to the environment:
+## (Re-)estimate Models with Diferent Sampling Settings
+Running the code for the first time resulted in an error for AR and VD: `Each log-likelihood matrix must have the same dimensions.` 
+Upon inspection, we found that some models had different dimensions, because `VD_intercept`,`AR_enviroment_language_age` and `AR_task_environment_language_age` were run with 10,000 instead of 5,000 iterations (without further explanation). We therefore re-ran these models with less iterations. 
 
+```{r rerun-models}
+# Preparations
+baseline_e <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Age_months + 
+                   Language + Environment + (1 | Language/id_site/measurement_num))
+
+data_AR_multiple_final <- readRDS(here("data/data_AR_multiple_final.RData"))
+
+
+baseline_z <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + (1 | Language/id_site/measurement_num))
+data_VD_multiple_final <- readRDS(here("data/data_VD_multiple_final.RData"))
+
+priors <- c(brms::prior(normal(0, 2.5), class = Intercept),
+            brms::prior(normal(1, 1), class = sd),
+            brms::prior(gamma(2, 0.1), class = nu))
+
+priors1 <- c(brms::prior(normal(0, 2.5), class = Intercept),
+             brms::prior(normal(1, 1), class = sd),
+             brms::prior(normal(0, 1), class = b),
+             brms::prior(normal(0, 0.05), class = b, coef = "Age_months"),
+             brms::prior(gamma(2, 0.1), class = nu))
+
+AR_task_environment_language_age_m <- 
+  brm_multiple(
+    baseline_e,
+    save_pars = save_pars(all = TRUE),
+    data = data_AR_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "replication", "AR_task_environment_language_age_m_rep"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = 2,
+    chains = 2,
+    recompile = TRUE,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.999,
+      max_treedepth = 20 ))
+
+AR_environment_language_age_m <- 
+  brm_multiple(
+    baseline_e,
+    save_pars = save_pars(all = TRUE),
+    data = data_AR_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "replication", "AR_environment_language_age_m_rep"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.999,
+      max_treedepth = 20 ))
+
+VD_intercept_m <- 
+  brm_multiple(
+    baseline_z,
+    save_pars = save_pars(all = TRUE),
+    data = data_VD_multiple_final, 
+    family = student,
+    prior = priors,
+    file = here("models", "replication", "VD_intercept_m_rep"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = 2,
+    chains = 2,
+    recompile = TRUE,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.999,
+      max_treedepth = 20 ))
+
+```
+
+
+Then, in the original code, `AR_task_language_age_m` was not estimated with `brms::brm_multiple`, but with the normal brms setting - the results therefore ignore the uncertainty of MICE imputation. Additionally, this leads to a different number of posterior samples, which impedes the calculation of model weights.
+
+```{r}
+AR_task_language_age_m <- 
+  brm_multiple(
+    baseline_t,
+    save_pars = save_pars(all = TRUE),
+    data = data_AR_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "replication", "AR_task_language_age_m_rep"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.99,
+      max_treedepth = 20 ))
+```
+
+
+We re-estimate 
+
+## Estimate Model Weights
+Now load in all relevant models to the environment.
 This is including "task_language_age" and "environment_language_age" for every model, which was omitted from the original code, but mentioned in the manuscript.
 
 ```{r}
@@ -372,7 +490,6 @@ load_models <- function(prefix, replication = TRUE) {
 # safely compute weights
 compute_weights_safe <- function(models, method) {
   tryCatch({
-     # do.call(model_weights, c(models, list(weights = "loo")))
     # unfortunately had to hardcode this, other solutions did not work 
     # as intended
     weights <- brms::model_weights(models[[1]], models[[2]], models[[3]],
@@ -387,20 +504,22 @@ compute_weights_safe <- function(models, method) {
 }
 
 # compute all model weights for a given prefix
-compute_model_weights <- function(prefix) {
+compute_model_weights <- function(prefix, pmp = FALSE) {
   models <- load_models(prefix)
   
   weights <- list(
     loo = compute_weights_safe(models, "loo"),
     stacking = compute_weights_safe(models, "stacking"),
-    waic = compute_weights_safe(models, "waic")
-    # pmp = tryCatch({
-    #   post_prob(models$environment, models$task, models$task_environment_language_age,
-    #             models$task_language_age, models$environment_language_age ,models$age_language, models$age, models$language, models$intercept)
-    # }, error = function(e) {
-    #   message(paste("Error in post_prob for prefix", prefix, ": ", e$message))
-    #   return(NULL)
-    # })
+    waic = compute_weights_safe(models, "waic"),
+    if(isTRUE(pmp)){
+    pmp = tryCatch({
+      post_prob(models$environment, models$task, models$task_environment_language_age,
+                models$task_language_age, models$environment_language_age ,models$age_language, models$age, models$language, models$intercept)
+    }, error = function(e) {
+      message(paste("Error in post_prob for prefix", prefix, ": ", e$message))
+      return(NULL)
+    })
+    }
   )
   
   rm(models) # Remove models from memory after calculation
@@ -411,14 +530,6 @@ compute_model_weights <- function(prefix) {
 prefixes <- c("F0", "VSA", "AR", "F0V", "VD")
 weights <- list()
 
-F0_models <- load_models("F0")
-weights[["F0"]] <- list()
-weights[["F0"]]$loo <- compute_weights_safe(F0_models, "loo")
-weights[["F0"]]$stacking <- compute_weights_safe(F0_models, "stacking")
-weights[["F0"]]$waic <- compute_weights_safe(F0_models, "waic")
-# weights[["F0"]]$pmp <- post_prob(F0_models$environment, F0_models$task, F0_models$task_environment_language_age,
-#                 F0_models$task_language_age, F0_models$environment_language_age ,F0_models$age_language, F0_models$age, F0_models$language, F0_models$intercept)
-
 
 # out of curiosity: What if we exclude simpler models and only use those
 # mentioned in the text?
@@ -427,59 +538,75 @@ F0_reduced_stacking <- brms::model_weights(F0_models$task_environment_language_a
                                            F0_models$age_language,
                                            F0_models$environment_language_age)
 
-for (prefix in prefixes) {
+# For now, we compute weights without pmp, which often throws errors
+for(prefix in prefixes) {
   message(paste("Computing weights for prefix:", prefix))
   weights[[prefix]] <- compute_model_weights(prefix)
 }
-```
+
+for(prefix in prefixes){
+  message(paste("Computing weights for prefix:", prefix))
+  models <- load_models(prefix)
+  weights[[prefix]]$stacking <- compute_weights_safe(models, "stacking")
+  rm(models)
+}
+
+
+models <- load_models("AR")
+weights[["AR"]]$stacking <- compute_weights_safe(models, "stacking")
+rm(models)
 
 
 
-
-Running this code for the first time resulted in an error for AR and VD: `Each log-likelihood matrix must have the same dimensions.` 
-Upon inspection, we found that some models had different dimensions, because `VD_intercept` and `AR_task_environment_language_age` were run with 10,000 instead of 5,000 iterations (without further explanation). We therefore re-ran these models with less iterations. 
-
-
-
-Save all weights 
-```{r}
-weights_list <- list(
-  weights_AR_waic = weights_AR_waic, 
-  weights_AR_loo = weights_AR_loo,
-  weights_F0_waic = weights_F0_waic,
-  weights_F0_loo = weights_F0_loo,
-  weights_F0V_waic = weights_F0V_waic,
-  weights_F0V_loo = weights_F0V_loo,
-  weights_VSA_waic = weights_VSA_waic,
-  weights_VSA_loo = weights_VSA_loo,
-  weights_VD_waic = weights_VD_waic,
-  weights_VD_loo = weights_VD_loo
-)
-
-saveRDS(object = weights_list, 
+saveRDS(object = weights, 
         file = here("output/replication/weights_list.RDS"))
 
 ```
 
-Reload all results
-```{r}
-weights_list <- readRDS(here("output/replication/weights_list.RDS"))
-```
 
+
+
+### Present Model Weights Results
+Reload all results
+```{r, eval = TRUE}
+weights <- readRDS(here("output/replication/weights_list.RDS"))
+```
 
 Then create a comparison table for model rank:
-```{r}
+```{r, eval = TRUE}
+df_weights <- lapply(weights, function(x){
+  bind_rows(x, .id = "weights")
+}) |> 
+  bind_rows(.id = "model")
 
+
+# compute ranks and print to LaTeX
+df_weights |> 
+  pivot_longer(!c(model, weights)) |> 
+  group_by(model, weights) |> 
+  mutate(rank = rank(-value)) |> 
+  mutate(value = round(value, 3)) |> 
+  mutate(value = format(value, scientific = FALSE)) |> 
+  mutate(value = paste0(value, " (", rank, ")")) |> 
+  ungroup() |> 
+  pivot_wider(id_cols = c(model, weights), names_from = name, values_from = value) |> 
+  # prettier column names
+  rename_with(~gsub("_", ", ", .)) |> 
+  rename_with(str_to_title) |> 
+  # Remove lower-case for shorter column names
+   rename_with(~ gsub("[^A-Z]", "",.)) |> 
+  rename(
+    Model = M,
+    Weights = W
+  ) |> 
+  select(Model, Weights, I, E, "T", A, L, AL, ELA, TLA, TELA) |> 
+  xtable::xtable() |> 
+  print(include.rownames = FALSE)
 ```
 
 
 
-
-
-
-
-
-# 3. Sampler Settings
+# Sampler Settings
 The authors used relatively unorthodox sampler settings by choosing an `adapt_delta` of 0.99 and a `max_treedepth` of 20. We will compare fitting the models selected as best by the authors to the same models with more standard sampler settings, as this might give us an insight into potential issues with model complexity.
 
 ## F0
@@ -709,7 +836,7 @@ bayesplot::mcmc_pairs(F0V_task_language_age_m_sampler, np = np_F0V, pars = c("In
 
 
 
-# 4. Session Info
+# Session Info
 
 ```{r}
 pander::pander(sessionInfo())
