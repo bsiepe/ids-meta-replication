@@ -4217,7 +4217,7 @@ We use a function to compare point estimates of the original models to the repli
 
 ```{r, eval = FALSE}
 source("functions.R")
-diff_comp <- compare_point_ests("models", "models/replication",           random_effects = TRUE)
+diff_comp <- compare_point_ests("models", "models/replication", random_effects = TRUE)
 
 # remove all NA
 diff_comp_clean <- diff_comp[unlist(unname(lapply(diff_comp, function(x) !is.logical(x))))]
@@ -4323,7 +4323,7 @@ Model fit assessment was originally conducted via "loo". In the file `robustness
 First, we can check the model rank order in our replication of loo weights:
 ```{r, eval = TRUE}
 # read in model weight results
-weights_list <- readRDS(here("output/replication/weights_list.RDS")) 
+weights_list <- readRDS(here("output/replication/weights_list_new.RDS")) 
 
 # combine to df
 df_weights <- do.call(rbind, weights_list)
