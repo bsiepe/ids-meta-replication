@@ -53,20 +53,33 @@ set.seed(35032)
 Here, we will use Robust Bayesian Meta-Analyses to fit an ensemble of meta-analytic models, which will then be averaged with Bayesian Model Averaging. These models also estimate a publication bias adjustment.
 https://fbartos.github.io/RoBMA/reference/RoBMA.reg.html
 ## F0
-The authors selected the model with language, age, task & environment as predictors as the best model. 
 
-TODO not sure how to deal with multiple imputation yet. Maybe average
 
 TODO how to deal with hedges g
 https://forum.cogsci.nl/discussion/7239/robma-random-effects-meta-analysis-with-meta-regression
+
+
+We use an auxiliary function to estimate all model-averaged models:
+```{r}
+prefixes <- c("F0", "VSA", "AR", "F0V", "VD")
+robma_fits <- list()
+
+for(prefix in prefixes){
+  message(paste("Computing RoBMA for prefix:", prefix))
+  robma_fits[[prefix]] <- estimate_robma(prefix)
+}
+
+```
+
+
 
 ### Intercept-Only
 ```{r f0-intercept-robma}
 data_F0 <- readRDS(here("data/data_F0_multiple_final.RData"))
 
-
-
 # TODO hedges g instead of d
+# TODO Why is this a multivariate model? 
+# TODO what about MICE?
 F0_pub_bias <- RoBMA(
       y = data_F0[[1]]$Effect_Size, 
       se = data_F0[[1]]$Effect_Size_se, 
@@ -75,7 +88,6 @@ F0_pub_bias <- RoBMA(
       parallel = TRUE, 
       seed = 35037)
 
-# TODO Why is this a multivariate model? 
 saveRDS(F0_pub_bias, file = here("output/replication/F0_pub_bias.RDS"))
 
 ```
@@ -466,65 +478,6 @@ This is including "task_language_age" and "environment_language_age" for every m
 ```{r}
 options(future.globals.maxSize = +Inf)
 
-load_models <- function(prefix, replication = TRUE) {
-  file_names <- c("environment_m_rep.rds", "task_m_rep.rds", "task_environment_language_age_m_rep.rds", "task_language_age_m_rep.rds", "environment_language_age_m_rep.rds",
-                  "age_language_m_rep.rds", "age_m_rep.rds", "language_m_rep.rds", "intercept_m_rep.rds")
-  # if original models instead of our replications should be used
-  if(isFALSE(replication)){
-    file_names <- gsub("_rep", "", file_names)
-  }
-  final_names <- c("environment", "task", "task_environment_language_age", "task_language_age", "environment_language_age", "age_language", "age", "language", "intercept")
-  
-  models <- list()
-  for (i in seq_along(file_names)) {
-    if(isTRUE(replication)){
-      model <- readRDS(paste0("models/replication/", prefix, "_", file_names[i]))
-    } else{
-      model <- readRDS(paste0("models/", prefix, "_", file_names[i]))
-    }
-    models[[final_names[i]]] <- model
-  }
-  return(models)
-}
-
-# safely compute weights
-compute_weights_safe <- function(models, method) {
-  tryCatch({
-    # unfortunately had to hardcode this, other solutions did not work 
-    # as intended
-    weights <- brms::model_weights(models[[1]], models[[2]], models[[3]],
-                        models[[4]], models[[5]], models[[6]], 
-                        models[[7]], models[[8]], models[[9]], weights = method)
-    names(weights) <- names(models)
-    return(weights)
-  }, error = function(e) {
-    message(paste("Error in model_weights with method", method, ": ", e$message))
-    return(NULL)
-  })
-}
-
-# compute all model weights for a given prefix
-compute_model_weights <- function(prefix, pmp = FALSE) {
-  models <- load_models(prefix)
-  
-  weights <- list(
-    loo = compute_weights_safe(models, "loo"),
-    stacking = compute_weights_safe(models, "stacking"),
-    waic = compute_weights_safe(models, "waic"),
-    if(isTRUE(pmp)){
-    pmp = tryCatch({
-      post_prob(models$environment, models$task, models$task_environment_language_age,
-                models$task_language_age, models$environment_language_age ,models$age_language, models$age, models$language, models$intercept)
-    }, error = function(e) {
-      message(paste("Error in post_prob for prefix", prefix, ": ", e$message))
-      return(NULL)
-    })
-    }
-  )
-  
-  rm(models) # Remove models from memory after calculation
-  return(weights)
-}
 
 # iterate over each prefix
 prefixes <- c("F0", "VSA", "AR", "F0V", "VD")
@@ -544,17 +497,6 @@ for(prefix in prefixes) {
   weights[[prefix]] <- compute_model_weights(prefix)
 }
 
-for(prefix in prefixes){
-  message(paste("Computing weights for prefix:", prefix))
-  models <- load_models(prefix)
-  weights[[prefix]]$stacking <- compute_weights_safe(models, "stacking")
-  rm(models)
-}
-
-
-models <- load_models("AR")
-weights[["AR"]]$stacking <- compute_weights_safe(models, "stacking")
-rm(models)
 
 
 
@@ -643,11 +585,28 @@ F0_task_environment_language_age_m_sampler <-
       adapt_delta = 0.8,
       max_treedepth = 10 ))
 
-summary(F0_task_environment_language_age_m_sampler)
-pp_check(F0_task_environment_language_age_m_sampler, ndraws = 100)
+
 
 ```
 
+
+Reload the re-estimated model and the original model.
+```{r}
+F0_task_environment_language_age_m <- readRDS("models/F0_task_environment_language_age_m.rds")
+F0_task_environment_language_age_m_sampler <- readRDS("models/replication/sampler_check/F0_task_environment_language_age_m_rep_sampler.rds")
+```
+
+
+### Compare Point Estimates
+We now compare the point estimates of the re-estimated model with those of the original model:
+```{r}
+fit_compare <- compare_point_ests(F0_task_environment_language_age_m,
+                   F0_task_environment_language_age_m_sampler)
+```
+
+
+
+### Convergence Checks
 Now we check convergence: 
 ```{r}
 lp_F0 <- bayesplot::log_posterior(F0_task_environment_language_age_m_sampler)
@@ -656,7 +615,7 @@ bayesplot::mcmc_nuts_divergence(np_F0, lp_F0)
 ```
 
 ```{r}
-bayesplot::mcmc_pairs(F0_task_environment_language_age_m_sampler, np = np_F0, pars = c("Intercept","b_Age_months","b_LanguageBritishEnglish"),
+bayesplot::mcmc_pairs(F0_task_environment_language_age_m_sampler, np = np_F0, pars = c("Intercept","b_Age_months","nu"),
            off_diag_args = list(size = 0.75))
 ```
 
@@ -664,9 +623,7 @@ bayesplot::mcmc_pairs(F0_task_environment_language_age_m_sampler, np = np_F0, pa
 bayesplot::mcmc_parcoord(F0_task_environment_language_age_m_sampler, np = np_F0, pars = c("Intercept","b_Age_months","b_LanguageBritishEnglish"))
 ```
 
-
-
-Compare results to the original model
+### Model Simplification
 
 ## VSA
 The authors selected the model with age & language as predictors as the best model.
