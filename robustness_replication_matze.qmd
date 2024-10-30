@@ -1,0 +1,144 @@
+---
+title: "Robustness replication of *A Bayesian Meta-Analysis of the Acoustic Properties of Infant-Directed Speech*"
+author: 
+ - name: Björn S. Siepe
+   orcid: 0000-0002-9558-4648
+   affiliations: University of Marburg
+ - name: Matthias Kloft
+   orcid: 0000-0003-1845-6957
+   affiliations: University of Marburg  
+ - name: Semih Can Aktepe
+   orcid: 0000-0002-4776-9138
+   affiliations: University of Marburg
+ - name: Daniel W. Heck
+   orcid: 0000-0002-6302-9252
+   affiliations: University of Marburg
+date: "`r Sys.Date()`"
+format:
+  html:
+    toc: true
+    number-sections: true
+    theme: cosmo
+    code-fold: true
+    code-tools: true
+    code-summary: "Show the code"
+    fig-width: 7
+    fig-height: 4.5
+    fig-align: "center"
+    embed-resoureces: true
+execute:
+  message: false
+  warning: false
+  eval: false
+---
+
+# Preparation
+Load the necessary packages and set the seed for reproducibility.
+```{r setup}
+library(brms)
+library(tidyverse)
+library(here)
+# library(renv)
+library(tidybayes)
+library(RoBMA)
+library(osfr)
+library(bayesplot)
+library(pander)
+library(knitr)
+library(xtable)
+set.seed(35032)
+``` 
+
+
+# Sampler Settings
+The authors used relatively unorthodox sampler settings by choosing an `adapt_delta` of 0.99 and a `max_treedepth` of 20. We will compare fitting the models selected as best by the authors to the same models with more standard sampler settings, as this might give us an insight into potential issues with model complexity.
+
+## F0
+The authors selected the model with language, age, task & environment as predictors as the best model. 
+
+```{r f0-sampler}
+data_F0_multiple_final <- readRDS(here("data/data_F0_multiple_final.RData"))
+
+baseline_te <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Age_months + 
+                    Language + Environment + Task + (1 | Language/id_site/measurement_num))
+
+priors1 <- c(brms::prior(normal(0, 2.5), class = Intercept),
+             brms::prior(normal(1, 1), class = sd),
+             brms::prior(normal(0, 1), class = b),
+             brms::prior(normal(0, 0.05), class = b, coef = "Age_months"),
+             brms::prior(gamma(2, 0.1), class = nu))
+
+F0_task_environment_language_age_m_sampler <- 
+  brm_multiple(
+    baseline_te,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "replication", "sampler_check", "F0_task_environment_language_age_m_rep_sampler"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.8,
+      max_treedepth = 10 ))
+
+
+
+```
+
+
+Reload the re-estimated model (`sampler`) and the original model.
+```{r}
+F0_task_environment_language_age_m <- readRDS("models/F0_task_environment_language_age_m.rds")
+F0_task_environment_language_age_m_sampler <- readRDS("models/replication/sampler_check/F0_task_environment_language_age_m_rep_sampler.rds")
+```
+
+
+### Compare Point Estimates
+We now compare the point estimates of the re-estimated model with those of the original model:
+```{r}
+fit_compare <- compare_point_ests(F0_task_environment_language_age_m,
+                   F0_task_environment_language_age_m_sampler)
+```
+
+
+
+### Convergence Checks
+Now we check convergence: 
+```{r}
+lp_F0 <- bayesplot::log_posterior(F0_task_environment_language_age_m_sampler)
+np_F0 <- bayesplot::nuts_params(F0_task_environment_language_age_m_sampler)
+bayesplot::mcmc_nuts_divergence(np_F0, lp_F0)
+```
+
+```{r}
+bayesplot::mcmc_pairs(F0_task_environment_language_age_m_sampler, np = np_F0, pars = c("Intercept","b_Age_months","nu"),
+           off_diag_args = list(size = 0.75))
+```
+
+```{r}
+bayesplot::mcmc_parcoord(F0_task_environment_language_age_m_sampler, np = np_F0, pars = c("Intercept","b_Age_months","b_LanguageBritishEnglish"))
+```
+
+### Model Simplification
+
+
+
+
+
+
+# Session Info
+
+```{r}
+pander::pander(sessionInfo())
+```
+
+
+
+
+
