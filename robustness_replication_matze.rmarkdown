@@ -32,8 +32,12 @@ execute:
   eval: true
 ---
 
+
+
 # Preparation
 Load the necessary packages and set the seed for reproducibility.
+
+
 ```{r setup}
 library(brms)
 library(tidyverse)
@@ -50,6 +54,8 @@ set.seed(35032)
 ``` 
 
 
+
+
 # Sampler Settings
 The authors used relatively unorthodox sampler settings by choosing an `adapt_delta` of 0.99 and a `max_treedepth` of 20. We will compare fitting the models selected as best by the authors to the same models with more standard sampler settings, as this might give us an insight into potential issues with model complexity.
 
@@ -58,6 +64,8 @@ The authors selected the model with language, age, task & environment as predict
 
 
 We fit the model with typical settings on the first dataset to diagnose what is going wrong
+
+
 
 ```{r f0-sampler}
 data_F0_multiple_final <- readRDS(here("data/data_F0_multiple_final.RData"))
@@ -91,9 +99,13 @@ F0_task_environment_language_age_m_sampler <-
 summary(F0_task_environment_language_age_m_sampler)
 ```
 
+
+
 - Error variance is zero! We incorporate the residual in the model.
 
 ### Re-fit with random effects for measurement number dropped
+
+
 ```{r }
 model_sigma_true <-  
   bf(Effect_Size | se(Effect_Size_se, sigma = TRUE) ~ 
@@ -127,7 +139,11 @@ fit_sigma_true <-
 summary(fit_sigma_true)
 ```
 
+
+
 Let's make the priors a little less informative
+
+
 
 ```{r }
 model_uninformative <-  
@@ -186,8 +202,12 @@ prior_summary(fit_uninformative)
 
 
 
+
+
 ### Convergence Checks
 Now we check convergence: 
+
+
 ```{r}
 lp_F0 <- bayesplot::log_posterior(F0_task_environment_language_age_m_sampler)
 np_F0 <- bayesplot::nuts_params(F0_task_environment_language_age_m_sampler)
@@ -203,6 +223,8 @@ bayesplot::mcmc_pairs(F0_task_environment_language_age_m_sampler, np = np_F0, pa
 bayesplot::mcmc_parcoord(F0_task_environment_language_age_m_sampler, np = np_F0, pars = c("Intercept","b_Age_months","b_LanguageBritishEnglish"))
 ```
 
+
+
 ### Model Simplification
 
 
@@ -212,11 +234,9 @@ bayesplot::mcmc_parcoord(F0_task_environment_language_age_m_sampler, np = np_F0,
 
 # Session Info
 
+
+
 ```{r}
 pander::pander(sessionInfo())
 ```
-
-
-
-
 
