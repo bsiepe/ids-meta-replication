@@ -60,7 +60,7 @@ The authors selected the model with language, age, task & environment as predict
 We fit the model with typical settings on the first dataset to diagnose what is going wrong
 
 ```{r f0-sampler}
-data_F0_multiple_final <- readRDS(here("data/data_F0_multiple_final.RData"))
+data_F0_multiple_final <- readRDS(here("data","data_F0_multiple_final.RData"))
 
 baseline_te <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Age_months + 
                     Language + Environment + Task + (1 | Language/id_site/measurement_num))
