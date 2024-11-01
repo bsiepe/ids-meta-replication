@@ -190,7 +190,7 @@ The model seems to be robust to the priors.
 Let us build the model from simple to complex to see where the divergences occur 
 first.
 
-#### Intercept-only Model
+### Intercept-only Model
 ```{r}
 #| eval: !expr params$refit
 
@@ -225,7 +225,7 @@ summary(fit_step_0)
 Everything seems to be fine here. Let's add the random intercept for language.
 
 
-#### Model: Intercept + Random Intercept for Language
+### Model: Intercept + Random Intercept for Language
 ```{r}
 #| eval: !expr params$refit
 
@@ -263,7 +263,7 @@ summary(fit_step_1)
 
 Everything seems to be fine here. Let's add the random intercept for site.
 
-#### Model: Intercept + Random Intercept for Language + Random Intercept for Site
+### Model: Intercept + Random Intercept for Language + Random Intercept for Site
 ```{r}
 #| eval: !expr params$refit
 
@@ -308,7 +308,7 @@ bayesplot::mcmc_pairs(
 off_diag_args = list(size = 0.7, alpha = 0.1))
 ```
 
-#### Check Frequencies for Language and Site
+### Check Frequencies for Language and Site
 ```{r}
 freq_language <- table(data_F0_multiple_final[[1]]$Language) %>% table()
 freq_language
@@ -319,7 +319,7 @@ freq_site[1] / sum(freq_site)
 ```
 
 
-#### Model: Intercept + Random Intercept for Language + Fixed Effects for Covariates
+### Model: Intercept + Random Intercept for Language + Fixed Effects for Covariates
 ```{r}
 model_step_3 <-  
   bf(Effect_Size | se(Effect_Size_se, sigma = TRUE) ~ 1 + 
@@ -344,7 +344,7 @@ fit_step_3 <-
 print(summary(fit_step_3), digits = 3)
 ```
 
-#### Fit again with multiple data sets
+## Fit again with multiple data sets
 
 ```{r}
 #| eval: !expr params$refit

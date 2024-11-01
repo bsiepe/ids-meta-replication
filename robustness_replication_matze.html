@@ -90,7 +90,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#f0" id="toc-f0" class="nav-link" data-scroll-target="#f0"><span class="header-section-number">2.1</span> F0</a>
   <ul class="collapse">
   <li><a href="#re-fit-with-residual-variance" id="toc-re-fit-with-residual-variance" class="nav-link" data-scroll-target="#re-fit-with-residual-variance"><span class="header-section-number">2.1.1</span> Re-fit with residual variance</a></li>
+  <li><a href="#intercept-only-model" id="toc-intercept-only-model" class="nav-link" data-scroll-target="#intercept-only-model"><span class="header-section-number">2.1.2</span> Intercept-only Model</a></li>
+  <li><a href="#model-intercept-random-intercept-for-language" id="toc-model-intercept-random-intercept-for-language" class="nav-link" data-scroll-target="#model-intercept-random-intercept-for-language"><span class="header-section-number">2.1.3</span> Model: Intercept + Random Intercept for Language</a></li>
+  <li><a href="#model-intercept-random-intercept-for-language-random-intercept-for-site" id="toc-model-intercept-random-intercept-for-language-random-intercept-for-site" class="nav-link" data-scroll-target="#model-intercept-random-intercept-for-language-random-intercept-for-site"><span class="header-section-number">2.1.4</span> Model: Intercept + Random Intercept for Language + Random Intercept for Site</a></li>
+  <li><a href="#check-frequencies-for-language-and-site" id="toc-check-frequencies-for-language-and-site" class="nav-link" data-scroll-target="#check-frequencies-for-language-and-site"><span class="header-section-number">2.1.5</span> Check Frequencies for Language and Site</a></li>
+  <li><a href="#model-intercept-random-intercept-for-language-fixed-effects-for-covariates" id="toc-model-intercept-random-intercept-for-language-fixed-effects-for-covariates" class="nav-link" data-scroll-target="#model-intercept-random-intercept-for-language-fixed-effects-for-covariates"><span class="header-section-number">2.1.6</span> Model: Intercept + Random Intercept for Language + Fixed Effects for Covariates</a></li>
   </ul></li>
+  <li><a href="#fit-again-with-multiple-data-sets" id="toc-fit-again-with-multiple-data-sets" class="nav-link" data-scroll-target="#fit-again-with-multiple-data-sets"><span class="header-section-number">2.2</span> Fit again with multiple data sets</a></li>
   </ul></li>
   <li><a href="#session-info" id="toc-session-info" class="nav-link" data-scroll-target="#session-info"><span class="header-section-number">3</span> Session Info</a></li>
   </ul>
@@ -740,8 +746,9 @@ scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
 </div>
 </div>
 <p>The model seems to be robust to the priors. Let us build the model from simple to complex to see where the divergences occur first.</p>
-<section id="intercept-only-model" class="level4" data-number="2.1.1.1">
-<h4 data-number="2.1.1.1" class="anchored" data-anchor-id="intercept-only-model"><span class="header-section-number">2.1.1.1</span> Intercept-only Model</h4>
+</section>
+<section id="intercept-only-model" class="level3" data-number="2.1.2">
+<h3 data-number="2.1.2" class="anchored" data-anchor-id="intercept-only-model"><span class="header-section-number">2.1.2</span> Intercept-only Model</h3>
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
@@ -798,8 +805,8 @@ scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
 </div>
 <p>Everything seems to be fine here. Let’s add the random intercept for language.</p>
 </section>
-<section id="model-intercept-random-intercept-for-language" class="level4" data-number="2.1.1.2">
-<h4 data-number="2.1.1.2" class="anchored" data-anchor-id="model-intercept-random-intercept-for-language"><span class="header-section-number">2.1.1.2</span> Model: Intercept + Random Intercept for Language</h4>
+<section id="model-intercept-random-intercept-for-language" class="level3" data-number="2.1.3">
+<h3 data-number="2.1.3" class="anchored" data-anchor-id="model-intercept-random-intercept-for-language"><span class="header-section-number">2.1.3</span> Model: Intercept + Random Intercept for Language</h3>
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
@@ -883,8 +890,8 @@ scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
 </div>
 <p>Everything seems to be fine here. Let’s add the random intercept for site.</p>
 </section>
-<section id="model-intercept-random-intercept-for-language-random-intercept-for-site" class="level4" data-number="2.1.1.3">
-<h4 data-number="2.1.1.3" class="anchored" data-anchor-id="model-intercept-random-intercept-for-language-random-intercept-for-site"><span class="header-section-number">2.1.1.3</span> Model: Intercept + Random Intercept for Language + Random Intercept for Site</h4>
+<section id="model-intercept-random-intercept-for-language-random-intercept-for-site" class="level3" data-number="2.1.4">
+<h3 data-number="2.1.4" class="anchored" data-anchor-id="model-intercept-random-intercept-for-language-random-intercept-for-site"><span class="header-section-number">2.1.4</span> Model: Intercept + Random Intercept for Language + Random Intercept for Site</h3>
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
@@ -970,8 +977,8 @@ scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
 </div>
 </div>
 </section>
-<section id="check-frequencies-for-language-and-site" class="level4" data-number="2.1.1.4">
-<h4 data-number="2.1.1.4" class="anchored" data-anchor-id="check-frequencies-for-language-and-site"><span class="header-section-number">2.1.1.4</span> Check Frequencies for Language and Site</h4>
+<section id="check-frequencies-for-language-and-site" class="level3" data-number="2.1.5">
+<h3 data-number="2.1.5" class="anchored" data-anchor-id="check-frequencies-for-language-and-site"><span class="header-section-number">2.1.5</span> Check Frequencies for Language and Site</h3>
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
@@ -1011,8 +1018,8 @@ scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
 </div>
 </div>
 </section>
-<section id="model-intercept-random-intercept-for-language-fixed-effects-for-covariates" class="level4" data-number="2.1.1.5">
-<h4 data-number="2.1.1.5" class="anchored" data-anchor-id="model-intercept-random-intercept-for-language-fixed-effects-for-covariates"><span class="header-section-number">2.1.1.5</span> Model: Intercept + Random Intercept for Language + Fixed Effects for Covariates</h4>
+<section id="model-intercept-random-intercept-for-language-fixed-effects-for-covariates" class="level3" data-number="2.1.6">
+<h3 data-number="2.1.6" class="anchored" data-anchor-id="model-intercept-random-intercept-for-language-fixed-effects-for-covariates"><span class="header-section-number">2.1.6</span> Model: Intercept + Random Intercept for Language + Fixed Effects for Covariates</h3>
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
@@ -1051,24 +1058,24 @@ Formula: Effect_Size | se(Effect_Size_se, sigma = TRUE) ~ 1 + Age_months + Envir
 Multilevel Hyperparameters:
 ~Language (Number of levels: 33) 
               Estimate Est.Error l-95% CI u-95% CI  Rhat Bulk_ESS Tail_ESS
-sd(Intercept)    0.345     0.099    0.185    0.573 1.003      745     1078
+sd(Intercept)    0.347     0.100    0.185    0.574 1.001      914     1004
 
 Regression Coefficients:
                         Estimate Est.Error l-95% CI u-95% CI  Rhat Bulk_ESS
-Intercept                  1.634     0.167    1.313    1.962 1.000     2128
-Age_months                -0.025     0.006   -0.038   -0.013 1.000     3173
-Environmentnaturalistic   -0.832     0.123   -1.065   -0.589 0.999     2488
-Taskspontaneousspeech      0.403     0.124    0.155    0.633 1.001     2393
+Intercept                  1.631     0.167    1.306    1.958 1.001     2238
+Age_months                -0.025     0.006   -0.037   -0.014 1.002     3105
+Environmentnaturalistic   -0.831     0.121   -1.076   -0.595 1.003     2809
+Taskspontaneousspeech      0.403     0.123    0.167    0.633 0.999     2183
                         Tail_ESS
-Intercept                   1881
-Age_months                  1813
-Environmentnaturalistic     1529
-Taskspontaneousspeech       1456
+Intercept                   1643
+Age_months                  1606
+Environmentnaturalistic     1824
+Taskspontaneousspeech       1528
 
 Further Distributional Parameters:
       Estimate Est.Error l-95% CI u-95% CI  Rhat Bulk_ESS Tail_ESS
-sigma    0.359     0.070    0.215    0.493 1.000     1856     1254
-nu       3.876     1.043    2.412    6.368 1.002     2465     1552
+sigma    0.357     0.070    0.217    0.492 0.999     2647     1343
+nu       3.861     1.030    2.399    6.307 0.999     2765     1472
 
 Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
 and Tail_ESS are effective sample size measures, and Rhat is the potential
@@ -1076,8 +1083,9 @@ scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
 </div>
 </div>
 </section>
-<section id="fit-again-with-multiple-data-sets" class="level4" data-number="2.1.1.6">
-<h4 data-number="2.1.1.6" class="anchored" data-anchor-id="fit-again-with-multiple-data-sets"><span class="header-section-number">2.1.1.6</span> Fit again with multiple data sets</h4>
+</section>
+<section id="fit-again-with-multiple-data-sets" class="level2" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="fit-again-with-multiple-data-sets"><span class="header-section-number">2.2</span> Fit again with multiple data sets</h2>
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
@@ -1142,8 +1150,6 @@ and Tail_ESS are effective sample size measures, and Rhat is the potential
 scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
 </div>
 </div>
-</section>
-</section>
 </section>
 </section>
 <section id="session-info" class="level1" data-number="3">
@@ -1820,7 +1826,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb48-206"><a href="#cb48-206" aria-hidden="true" tabindex="-1"></a>Let us build the model from simple to complex to see where the divergences occur </span>
 <span id="cb48-207"><a href="#cb48-207" aria-hidden="true" tabindex="-1"></a>first.</span>
 <span id="cb48-208"><a href="#cb48-208" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-209"><a href="#cb48-209" aria-hidden="true" tabindex="-1"></a><span class="fu">#### Intercept-only Model</span></span>
+<span id="cb48-209"><a href="#cb48-209" aria-hidden="true" tabindex="-1"></a><span class="fu">### Intercept-only Model</span></span>
 <span id="cb48-212"><a href="#cb48-212" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
 <span id="cb48-213"><a href="#cb48-213" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: !expr params$refit</span></span>
 <span id="cb48-214"><a href="#cb48-214" aria-hidden="true" tabindex="-1"></a></span>
@@ -1855,7 +1861,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb48-247"><a href="#cb48-247" aria-hidden="true" tabindex="-1"></a>Everything seems to be fine here. Let's add the random intercept for language.</span>
 <span id="cb48-248"><a href="#cb48-248" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb48-249"><a href="#cb48-249" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-250"><a href="#cb48-250" aria-hidden="true" tabindex="-1"></a><span class="fu">#### Model: Intercept + Random Intercept for Language</span></span>
+<span id="cb48-250"><a href="#cb48-250" aria-hidden="true" tabindex="-1"></a><span class="fu">### Model: Intercept + Random Intercept for Language</span></span>
 <span id="cb48-253"><a href="#cb48-253" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
 <span id="cb48-254"><a href="#cb48-254" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: !expr params$refit</span></span>
 <span id="cb48-255"><a href="#cb48-255" aria-hidden="true" tabindex="-1"></a></span>
@@ -1893,7 +1899,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb48-293"><a href="#cb48-293" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb48-294"><a href="#cb48-294" aria-hidden="true" tabindex="-1"></a>Everything seems to be fine here. Let's add the random intercept for site.</span>
 <span id="cb48-295"><a href="#cb48-295" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-296"><a href="#cb48-296" aria-hidden="true" tabindex="-1"></a><span class="fu">#### Model: Intercept + Random Intercept for Language + Random Intercept for Site</span></span>
+<span id="cb48-296"><a href="#cb48-296" aria-hidden="true" tabindex="-1"></a><span class="fu">### Model: Intercept + Random Intercept for Language + Random Intercept for Site</span></span>
 <span id="cb48-299"><a href="#cb48-299" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
 <span id="cb48-300"><a href="#cb48-300" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: !expr params$refit</span></span>
 <span id="cb48-301"><a href="#cb48-301" aria-hidden="true" tabindex="-1"></a></span>
@@ -1938,7 +1944,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb48-346"><a href="#cb48-346" aria-hidden="true" tabindex="-1"></a><span class="at">off_diag_args =</span> <span class="fu">list</span>(<span class="at">size =</span> <span class="fl">0.7</span>, <span class="at">alpha =</span> <span class="fl">0.1</span>))</span>
 <span id="cb48-347"><a href="#cb48-347" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb48-348"><a href="#cb48-348" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-349"><a href="#cb48-349" aria-hidden="true" tabindex="-1"></a><span class="fu">#### Check Frequencies for Language and Site</span></span>
+<span id="cb48-349"><a href="#cb48-349" aria-hidden="true" tabindex="-1"></a><span class="fu">### Check Frequencies for Language and Site</span></span>
 <span id="cb48-352"><a href="#cb48-352" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
 <span id="cb48-353"><a href="#cb48-353" aria-hidden="true" tabindex="-1"></a>freq_language <span class="ot">&lt;-</span> <span class="fu">table</span>(data_F0_multiple_final[[<span class="dv">1</span>]]<span class="sc">$</span>Language) <span class="sc">%&gt;%</span> <span class="fu">table</span>()</span>
 <span id="cb48-354"><a href="#cb48-354" aria-hidden="true" tabindex="-1"></a>freq_language</span>
@@ -1949,7 +1955,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb48-359"><a href="#cb48-359" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb48-360"><a href="#cb48-360" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb48-361"><a href="#cb48-361" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-362"><a href="#cb48-362" aria-hidden="true" tabindex="-1"></a><span class="fu">#### Model: Intercept + Random Intercept for Language + Fixed Effects for Covariates</span></span>
+<span id="cb48-362"><a href="#cb48-362" aria-hidden="true" tabindex="-1"></a><span class="fu">### Model: Intercept + Random Intercept for Language + Fixed Effects for Covariates</span></span>
 <span id="cb48-365"><a href="#cb48-365" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
 <span id="cb48-366"><a href="#cb48-366" aria-hidden="true" tabindex="-1"></a>model_step_3 <span class="ot">&lt;-</span>  </span>
 <span id="cb48-367"><a href="#cb48-367" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bf</span>(Effect_Size <span class="sc">|</span> <span class="fu">se</span>(Effect_Size_se, <span class="at">sigma =</span> <span class="cn">TRUE</span>) <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> </span>
@@ -1974,7 +1980,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb48-388"><a href="#cb48-388" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(fit_step_3), <span class="at">digits =</span> <span class="dv">3</span>)</span>
 <span id="cb48-389"><a href="#cb48-389" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb48-390"><a href="#cb48-390" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-391"><a href="#cb48-391" aria-hidden="true" tabindex="-1"></a><span class="fu">#### Fit again with multiple data sets</span></span>
+<span id="cb48-391"><a href="#cb48-391" aria-hidden="true" tabindex="-1"></a><span class="fu">## Fit again with multiple data sets</span></span>
 <span id="cb48-392"><a href="#cb48-392" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb48-395"><a href="#cb48-395" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
 <span id="cb48-396"><a href="#cb48-396" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: !expr params$refit</span></span>
