@@ -94,7 +94,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#model-intercept-random-intercept-for-language" id="toc-model-intercept-random-intercept-for-language" class="nav-link" data-scroll-target="#model-intercept-random-intercept-for-language"><span class="header-section-number">2.1.3</span> Model: Intercept + Random Intercept for Language</a></li>
   <li><a href="#model-intercept-random-intercept-for-language-random-intercept-for-site" id="toc-model-intercept-random-intercept-for-language-random-intercept-for-site" class="nav-link" data-scroll-target="#model-intercept-random-intercept-for-language-random-intercept-for-site"><span class="header-section-number">2.1.4</span> Model: Intercept + Random Intercept for Language + Random Intercept for Site</a></li>
   <li><a href="#check-frequencies-for-language-and-site" id="toc-check-frequencies-for-language-and-site" class="nav-link" data-scroll-target="#check-frequencies-for-language-and-site"><span class="header-section-number">2.1.5</span> Check Frequencies for Language and Site</a></li>
-  <li><a href="#model-intercept-random-intercept-for-language-fixed-effects-for-covariates" id="toc-model-intercept-random-intercept-for-language-fixed-effects-for-covariates" class="nav-link" data-scroll-target="#model-intercept-random-intercept-for-language-fixed-effects-for-covariates"><span class="header-section-number">2.1.6</span> Model: Intercept + Random Intercept for Language + Fixed Effects for Covariates</a></li>
+  <li><a href="#test-intra-class-correlation" id="toc-test-intra-class-correlation" class="nav-link" data-scroll-target="#test-intra-class-correlation"><span class="header-section-number">2.1.6</span> Test intra-class correlation</a></li>
+  <li><a href="#model-intercept-random-intercept-for-language-fixed-effects-for-covariates" id="toc-model-intercept-random-intercept-for-language-fixed-effects-for-covariates" class="nav-link" data-scroll-target="#model-intercept-random-intercept-for-language-fixed-effects-for-covariates"><span class="header-section-number">2.1.7</span> Model: Intercept + Random Intercept for Language + Fixed Effects for Covariates</a></li>
   </ul></li>
   <li><a href="#fit-again-with-multiple-data-sets" id="toc-fit-again-with-multiple-data-sets" class="nav-link" data-scroll-target="#fit-again-with-multiple-data-sets"><span class="header-section-number">2.2</span> Fit again with multiple data sets</a></li>
   </ul></li>
@@ -177,13 +178,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(here)</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># library(renv)</span></span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidybayes)</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">#library(RoBMA)</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">#library(osfr)</span></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(bayesplot)</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">#library(pander)</span></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(knitr)</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">35032</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(performance)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">#library(RoBMA)</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">#library(osfr)</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(bayesplot)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co">#library(pander)</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(knitr)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">35032</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 </section>
@@ -979,6 +981,8 @@ scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
 </section>
 <section id="check-frequencies-for-language-and-site" class="level3" data-number="2.1.5">
 <h3 data-number="2.1.5" class="anchored" data-anchor-id="check-frequencies-for-language-and-site"><span class="header-section-number">2.1.5</span> Check Frequencies for Language and Site</h3>
+<section id="language" class="level4" data-number="2.1.5.1">
+<h4 data-number="2.1.5.1" class="anchored" data-anchor-id="language"><span class="header-section-number">2.1.5.1</span> Language</h4>
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
@@ -990,6 +994,9 @@ scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
  1  2  3  4  6  7  8 13 18 20 51 83 
 14  4  2  1  5  1  1  1  1  1  1  1 </code></pre>
 </div>
+</div>
+<p>Percentage of clusters with just 1 observation</p>
+<div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>freq_language[<span class="dv">1</span>] <span class="sc">/</span> <span class="fu">sum</span>(freq_language)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -998,84 +1005,191 @@ scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
 <pre><code>        1 
 0.4242424 </code></pre>
 </div>
+</div>
+<p>Number of relevant clusters</p>
+<div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>freq_site <span class="ot">&lt;-</span> <span class="fu">table</span>(data_F0_multiple_final[[<span class="dv">1</span>]]<span class="sc">$</span>id_site) <span class="sc">%&gt;%</span> <span class="fu">table</span>()</span>
-<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>freq_site</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(freq_language[<span class="sc">-</span><span class="dv">1</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 19</code></pre>
+</div>
+</div>
+</section>
+<section id="site" class="level4" data-number="2.1.5.2">
+<h4 data-number="2.1.5.2" class="anchored" data-anchor-id="site"><span class="header-section-number">2.1.5.2</span> Site</h4>
+<div class="cell">
+<details class="code-fold">
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>freq_site <span class="ot">&lt;-</span> <span class="fu">table</span>(data_F0_multiple_final[[<span class="dv">1</span>]]<span class="sc">$</span>id_site) <span class="sc">%&gt;%</span> <span class="fu">table</span>()</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>freq_site</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>.
  1  2  3  4  5  6  9 12 69 
 50 20  1  4  3  8  1  1  1 </code></pre>
 </div>
+</div>
+<p>Percentage of clusters with just 1 observation</p>
+<div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>freq_site[<span class="dv">1</span>] <span class="sc">/</span> <span class="fu">sum</span>(freq_site)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>freq_site[<span class="dv">1</span>] <span class="sc">/</span> <span class="fu">sum</span>(freq_site)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>        1 
 0.5617978 </code></pre>
 </div>
 </div>
-</section>
-<section id="model-intercept-random-intercept-for-language-fixed-effects-for-covariates" class="level3" data-number="2.1.6">
-<h3 data-number="2.1.6" class="anchored" data-anchor-id="model-intercept-random-intercept-for-language-fixed-effects-for-covariates"><span class="header-section-number">2.1.6</span> Model: Intercept + Random Intercept for Language + Fixed Effects for Covariates</h3>
+<p>Number of relevant clusters</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>model_step_3 <span class="ot">&lt;-</span>  </span>
-<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bf</span>(Effect_Size <span class="sc">|</span> <span class="fu">se</span>(Effect_Size_se, <span class="at">sigma =</span> <span class="cn">TRUE</span>) <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> </span>
-<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>       Age_months <span class="sc">+</span> Environment <span class="sc">+</span> Task <span class="sc">+</span></span>
-<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>       (<span class="dv">1</span> <span class="sc">|</span> Language))</span>
-<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a>fit_step_3 <span class="ot">&lt;-</span> </span>
-<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm</span>(</span>
-<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a>    model_step_3,</span>
-<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">save_pars =</span> <span class="fu">save_pars</span>(<span class="at">all =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> data_F0_multiple_final[[<span class="dv">1</span>]], </span>
-<span id="cb40-11"><a href="#cb40-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">family =</span> student,</span>
-<span id="cb40-12"><a href="#cb40-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">iter =</span> <span class="dv">1000</span>, </span>
-<span id="cb40-13"><a href="#cb40-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">warmup =</span> <span class="dv">500</span>,</span>
-<span id="cb40-14"><a href="#cb40-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">refresh =</span> <span class="dv">1000</span>,</span>
-<span id="cb40-15"><a href="#cb40-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">cores =</span> <span class="dv">4</span>,</span>
-<span id="cb40-16"><a href="#cb40-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">chains =</span> <span class="dv">4</span></span>
-<span id="cb40-17"><a href="#cb40-17" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(freq_site[<span class="sc">-</span><span class="dv">1</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 39</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="test-intra-class-correlation" class="level3" data-number="2.1.6">
+<h3 data-number="2.1.6" class="anchored" data-anchor-id="test-intra-class-correlation"><span class="header-section-number">2.1.6</span> Test intra-class correlation</h3>
+<div class="cell">
+<details class="code-fold">
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>model_icc_language <span class="ot">&lt;-</span>  </span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bf</span>(Effect_Size <span class="sc">|</span> <span class="fu">se</span>(Effect_Size_se, <span class="at">sigma =</span> <span class="cn">TRUE</span>) <span class="sc">~</span> <span class="dv">1</span>  <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> Language))</span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a>fit_icc_language <span class="ot">&lt;-</span> </span>
+<span id="cb44-5"><a href="#cb44-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm</span>(</span>
+<span id="cb44-6"><a href="#cb44-6" aria-hidden="true" tabindex="-1"></a>    model_icc_language,</span>
+<span id="cb44-7"><a href="#cb44-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">save_pars =</span> <span class="fu">save_pars</span>(<span class="at">all =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb44-8"><a href="#cb44-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> data_F0_multiple_final[[<span class="dv">1</span>]], </span>
+<span id="cb44-9"><a href="#cb44-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">family =</span> student,</span>
+<span id="cb44-10"><a href="#cb44-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">iter =</span> <span class="dv">1000</span>, </span>
+<span id="cb44-11"><a href="#cb44-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">warmup =</span> <span class="dv">500</span>,</span>
+<span id="cb44-12"><a href="#cb44-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">refresh =</span> <span class="dv">1000</span>,</span>
+<span id="cb44-13"><a href="#cb44-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">cores =</span> <span class="dv">4</span>,</span>
+<span id="cb44-14"><a href="#cb44-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">chains =</span> <span class="dv">4</span></span>
+<span id="cb44-15"><a href="#cb44-15" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb44-16"><a href="#cb44-16" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(fit_icc_language, <span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_icc_language.rds"</span>))</span>
+<span id="cb44-17"><a href="#cb44-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-18"><a href="#cb44-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-19"><a href="#cb44-19" aria-hidden="true" tabindex="-1"></a>model_icc_site <span class="ot">&lt;-</span>  </span>
+<span id="cb44-20"><a href="#cb44-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bf</span>(Effect_Size <span class="sc">|</span> <span class="fu">se</span>(Effect_Size_se, <span class="at">sigma =</span> <span class="cn">TRUE</span>) <span class="sc">~</span> <span class="dv">1</span>  <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> id_site))</span>
+<span id="cb44-21"><a href="#cb44-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-22"><a href="#cb44-22" aria-hidden="true" tabindex="-1"></a>fit_icc_site <span class="ot">&lt;-</span> </span>
+<span id="cb44-23"><a href="#cb44-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm</span>(</span>
+<span id="cb44-24"><a href="#cb44-24" aria-hidden="true" tabindex="-1"></a>    model_icc_site,</span>
+<span id="cb44-25"><a href="#cb44-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">save_pars =</span> <span class="fu">save_pars</span>(<span class="at">all =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb44-26"><a href="#cb44-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> data_F0_multiple_final[[<span class="dv">1</span>]], </span>
+<span id="cb44-27"><a href="#cb44-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">family =</span> student,</span>
+<span id="cb44-28"><a href="#cb44-28" aria-hidden="true" tabindex="-1"></a>    <span class="at">iter =</span> <span class="dv">1000</span>, </span>
+<span id="cb44-29"><a href="#cb44-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">warmup =</span> <span class="dv">500</span>,</span>
+<span id="cb44-30"><a href="#cb44-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">refresh =</span> <span class="dv">1000</span>,</span>
+<span id="cb44-31"><a href="#cb44-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">cores =</span> <span class="dv">4</span>,</span>
+<span id="cb44-32"><a href="#cb44-32" aria-hidden="true" tabindex="-1"></a>    <span class="at">chains =</span> <span class="dv">4</span></span>
+<span id="cb44-33"><a href="#cb44-33" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb44-34"><a href="#cb44-34" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(fit_icc_site, <span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_icc_site.rds"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(fit_step_3), <span class="at">digits =</span> <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>fit_icc_language <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_icc_language.rds"</span>))</span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>fit_icc_site <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_icc_site.rds"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Language:</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu">icc</span>(fit_icc_language)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code># Intraclass Correlation Coefficient
+
+    Adjusted ICC: 0.348
+  Unadjusted ICC: 0.348</code></pre>
+</div>
+</div>
+<p>Site:</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="fu">icc</span>(fit_icc_site)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code># Intraclass Correlation Coefficient
+
+    Adjusted ICC: 0.956
+  Unadjusted ICC: 0.956</code></pre>
+</div>
+</div>
+<p>We want use Site as a random intercept and drop the random intercept for Language.</p>
+</section>
+<section id="model-intercept-random-intercept-for-language-fixed-effects-for-covariates" class="level3" data-number="2.1.7">
+<h3 data-number="2.1.7" class="anchored" data-anchor-id="model-intercept-random-intercept-for-language-fixed-effects-for-covariates"><span class="header-section-number">2.1.7</span> Model: Intercept + Random Intercept for Language + Fixed Effects for Covariates</h3>
+<div class="cell">
+<details class="code-fold">
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>model_step_3 <span class="ot">&lt;-</span>  </span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bf</span>(Effect_Size <span class="sc">|</span> <span class="fu">se</span>(Effect_Size_se, <span class="at">sigma =</span> <span class="cn">TRUE</span>) <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> </span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a>       Age_months <span class="sc">+</span> Environment <span class="sc">+</span> Task <span class="sc">+</span></span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a>       (<span class="dv">1</span> <span class="sc">|</span> id_site))</span>
+<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-6"><a href="#cb50-6" aria-hidden="true" tabindex="-1"></a>fit_step_3 <span class="ot">&lt;-</span> </span>
+<span id="cb50-7"><a href="#cb50-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm</span>(</span>
+<span id="cb50-8"><a href="#cb50-8" aria-hidden="true" tabindex="-1"></a>    model_step_3,</span>
+<span id="cb50-9"><a href="#cb50-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">save_pars =</span> <span class="fu">save_pars</span>(<span class="at">all =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb50-10"><a href="#cb50-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> data_F0_multiple_final[[<span class="dv">1</span>]], </span>
+<span id="cb50-11"><a href="#cb50-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">family =</span> student,</span>
+<span id="cb50-12"><a href="#cb50-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">iter =</span> <span class="dv">1000</span>, </span>
+<span id="cb50-13"><a href="#cb50-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">warmup =</span> <span class="dv">500</span>,</span>
+<span id="cb50-14"><a href="#cb50-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">refresh =</span> <span class="dv">1000</span>,</span>
+<span id="cb50-15"><a href="#cb50-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">cores =</span> <span class="dv">4</span>,</span>
+<span id="cb50-16"><a href="#cb50-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">chains =</span> <span class="dv">4</span></span>
+<span id="cb50-17"><a href="#cb50-17" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb50-18"><a href="#cb50-18" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(fit_step_3, <span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_step_3.rds"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div class="cell">
+<details class="code-fold">
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>fit_step_3 <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_step_3.rds"</span>))</span>
+<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(fit_step_3), <span class="at">digits =</span> <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code> Family: student 
   Links: mu = identity; sigma = identity; nu = identity 
-Formula: Effect_Size | se(Effect_Size_se, sigma = TRUE) ~ 1 + Age_months + Environment + Task + (1 | Language) 
+Formula: Effect_Size | se(Effect_Size_se, sigma = TRUE) ~ 1 + Age_months + Environment + Task + (1 | id_site) 
    Data: data_F0_multiple_final[[1]] (Number of observations: 262) 
   Draws: 4 chains, each with iter = 1000; warmup = 500; thin = 1;
          total post-warmup draws = 2000
 
 Multilevel Hyperparameters:
-~Language (Number of levels: 33) 
+~id_site (Number of levels: 89) 
               Estimate Est.Error l-95% CI u-95% CI  Rhat Bulk_ESS Tail_ESS
-sd(Intercept)    0.347     0.100    0.185    0.574 1.001      914     1004
+sd(Intercept)    0.861     0.099    0.681    1.080 1.001      419      519
 
 Regression Coefficients:
                         Estimate Est.Error l-95% CI u-95% CI  Rhat Bulk_ESS
-Intercept                  1.631     0.167    1.306    1.958 1.001     2238
-Age_months                -0.025     0.006   -0.037   -0.014 1.002     3105
-Environmentnaturalistic   -0.831     0.121   -1.076   -0.595 1.003     2809
-Taskspontaneousspeech      0.403     0.123    0.167    0.633 0.999     2183
+Intercept                  1.469     0.200    1.054    1.841 1.011      380
+Age_months                -0.017     0.006   -0.029   -0.004 1.000     1490
+Environmentnaturalistic   -0.490     0.205   -0.906   -0.082 1.012      296
+Taskspontaneousspeech      0.508     0.166    0.177    0.834 1.003      527
                         Tail_ESS
-Intercept                   1643
-Age_months                  1606
-Environmentnaturalistic     1824
-Taskspontaneousspeech       1528
+Intercept                    665
+Age_months                  1526
+Environmentnaturalistic      560
+Taskspontaneousspeech        759
 
 Further Distributional Parameters:
       Estimate Est.Error l-95% CI u-95% CI  Rhat Bulk_ESS Tail_ESS
-sigma    0.357     0.070    0.217    0.492 0.999     2647     1343
-nu       3.861     1.030    2.399    6.307 0.999     2765     1472
+sigma    0.071     0.052    0.003    0.197 1.000     1187      816
+nu       8.474     4.344    4.026   19.641 1.001     1034     1083
 
 Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
 and Tail_ESS are effective sample size measures, and Rhat is the potential
@@ -1089,65 +1203,83 @@ scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>fit_step_3_multiple <span class="ot">&lt;-</span> </span>
-<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm_multiple</span>(</span>
-<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>    model_step_3,</span>
-<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">save_pars =</span> <span class="fu">save_pars</span>(<span class="at">all =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> data_F0_multiple_final, </span>
-<span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">family =</span> student,</span>
-<span id="cb43-7"><a href="#cb43-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">iter =</span> <span class="dv">1000</span>, </span>
-<span id="cb43-8"><a href="#cb43-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">warmup =</span> <span class="dv">500</span>,</span>
-<span id="cb43-9"><a href="#cb43-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">refresh =</span> <span class="dv">1000</span>,</span>
-<span id="cb43-10"><a href="#cb43-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">cores =</span> <span class="dv">4</span>,</span>
-<span id="cb43-11"><a href="#cb43-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">chains =</span> <span class="dv">4</span></span>
-<span id="cb43-12"><a href="#cb43-12" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb43-13"><a href="#cb43-13" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(fit_step_3_multiple, <span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_step_3_multiple.rds"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a>fit_step_3_multiple <span class="ot">&lt;-</span> </span>
+<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm_multiple</span>(</span>
+<span id="cb53-3"><a href="#cb53-3" aria-hidden="true" tabindex="-1"></a>    model_step_3,</span>
+<span id="cb53-4"><a href="#cb53-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">save_pars =</span> <span class="fu">save_pars</span>(<span class="at">all =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb53-5"><a href="#cb53-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> data_F0_multiple_final, </span>
+<span id="cb53-6"><a href="#cb53-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">family =</span> student,</span>
+<span id="cb53-7"><a href="#cb53-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">iter =</span> <span class="dv">1000</span>, </span>
+<span id="cb53-8"><a href="#cb53-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">warmup =</span> <span class="dv">500</span>,</span>
+<span id="cb53-9"><a href="#cb53-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">refresh =</span> <span class="dv">1000</span>,</span>
+<span id="cb53-10"><a href="#cb53-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">cores =</span> <span class="dv">4</span>,</span>
+<span id="cb53-11"><a href="#cb53-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">chains =</span> <span class="dv">4</span></span>
+<span id="cb53-12"><a href="#cb53-12" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb53-13"><a href="#cb53-13" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(fit_step_3_multiple, <span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_step_3_multiple.rds"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>fit_step_3_multiple <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_step_3_multiple.rds"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>fit_step_3_multiple <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_step_3_multiple.rds"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(fit_step_3_multiple), <span class="at">digits =</span> <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(fit_step_3_multiple), <span class="at">digits =</span> <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code> Family: student 
   Links: mu = identity; sigma = identity; nu = identity 
-Formula: Effect_Size | se(Effect_Size_se, sigma = TRUE) ~ 1 + Age_months + Environment + Task + (1 | Language) 
+Formula: Effect_Size | se(Effect_Size_se, sigma = TRUE) ~ 1 + Age_months + Environment + Task + (1 | id_site) 
    Data: data_F0_multiple_final (Number of observations: 262) 
   Draws: 80 chains, each with iter = 1000; warmup = 500; thin = 1;
          total post-warmup draws = 40000
 
 Multilevel Hyperparameters:
-~Language (Number of levels: 33) 
+~id_site (Number of levels: 89) 
               Estimate Est.Error l-95% CI u-95% CI  Rhat Bulk_ESS Tail_ESS
-sd(Intercept)    0.344     0.099    0.182    0.568 1.003    15594    26338
+sd(Intercept)    0.868     0.099    0.685    1.076 1.011     7864    15298
 
 Regression Coefficients:
                         Estimate Est.Error l-95% CI u-95% CI  Rhat Bulk_ESS
-Intercept                  1.634     0.162    1.315    1.950 1.000    45184
-Age_months                -0.025     0.006   -0.037   -0.013 1.001    68820
-Environmentnaturalistic   -0.834     0.122   -1.073   -0.595 1.000    56010
-Taskspontaneousspeech      0.406     0.123    0.167    0.646 1.001    48339
+Intercept                  1.487     0.203    1.089    1.888 1.008     8917
+Age_months                -0.017     0.006   -0.029   -0.004 1.001    27904
+Environmentnaturalistic   -0.504     0.213   -0.924   -0.079 1.009     7283
+Taskspontaneousspeech      0.502     0.171    0.167    0.838 1.006     9713
                         Tail_ESS
-Intercept                  35064
-Age_months                 35155
-Environmentnaturalistic    34511
-Taskspontaneousspeech      32577
+Intercept                  15817
+Age_months                 30324
+Environmentnaturalistic    13462
+Taskspontaneousspeech      16338
 
 Further Distributional Parameters:
       Estimate Est.Error l-95% CI u-95% CI  Rhat Bulk_ESS Tail_ESS
-sigma    0.365     0.069    0.228    0.500 1.001    36519    24205
-nu       3.954     1.079    2.425    6.557 1.004    37355    30585
+sigma    0.072     0.054    0.003    0.201 1.002    22044    16674
+nu       8.766     4.449    4.089   20.381 1.004    18452    21963
 
 Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
 and Tail_ESS are effective sample size measures, and Rhat is the potential
 scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
+</div>
+</div>
+<div class="cell">
+<details class="code-fold">
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(brms<span class="sc">::</span><span class="fu">hypothesis</span>(fit_step_3_multiple, <span class="st">"Age_months &lt; 0"</span>, <span class="at">alpha =</span> .<span class="dv">025</span>), <span class="at">digits =</span> <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Hypothesis Tests for class b:
+        Hypothesis Estimate Est.Error CI.Lower CI.Upper Evid.Ratio Post.Prob
+1 (Age_months) &lt; 0   -0.017     0.006   -0.029   -0.004    186.793     0.995
+  Star
+1    *
+---
+'CI': 95%-CI for one-sided and 97.5%-CI for two-sided hypotheses.
+'*': For one-sided hypotheses, the posterior probability exceeds 97.5%;
+for two-sided hypotheses, the value tested against lies outside the 97.5%-CI.
+Posterior probabilities of point hypotheses assume equal prior probabilities.</code></pre>
 </div>
 </div>
 </section>
@@ -1157,15 +1289,15 @@ scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>pander<span class="sc">::</span><span class="fu">pander</span>(<span class="fu">sessionInfo</span>())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb59"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a>pander<span class="sc">::</span><span class="fu">pander</span>(<span class="fu">sessionInfo</span>())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <p><strong>R version 4.4.1 (2024-06-14 ucrt)</strong></p>
 <p><strong>Platform:</strong> x86_64-w64-mingw32/x64</p>
 <p><strong>locale:</strong> <em>LC_COLLATE=German_Germany.utf8</em>, <em>LC_CTYPE=German_Germany.utf8</em>, <em>LC_MONETARY=German_Germany.utf8</em>, <em>LC_NUMERIC=C</em> and <em>LC_TIME=German_Germany.utf8</em></p>
 <p><strong>attached base packages:</strong> <em>stats</em>, <em>graphics</em>, <em>grDevices</em>, <em>utils</em>, <em>datasets</em>, <em>methods</em> and <em>base</em></p>
-<p><strong>other attached packages:</strong> <em>knitr(v.1.47)</em>, <em>bayesplot(v.1.11.1)</em>, <em>tidybayes(v.3.0.7)</em>, <em>here(v.1.0.1)</em>, <em>lubridate(v.1.9.3)</em>, <em>forcats(v.1.0.0)</em>, <em>stringr(v.1.5.1)</em>, <em>dplyr(v.1.1.4)</em>, <em>purrr(v.1.0.2)</em>, <em>readr(v.2.1.5)</em>, <em>tidyr(v.1.3.1)</em>, <em>tibble(v.3.2.1)</em>, <em>ggplot2(v.3.5.1)</em>, <em>tidyverse(v.2.0.0)</em>, <em>brms(v.2.21.0)</em> and <em>Rcpp(v.1.0.12)</em></p>
-<p><strong>loaded via a namespace (and not attached):</strong> <em>tidyselect(v.1.2.1)</em>, <em>svUnit(v.1.0.6)</em>, <em>farver(v.2.1.2)</em>, <em>loo(v.2.7.0)</em>, <em>fastmap(v.1.2.0)</em>, <em>TH.data(v.1.1-2)</em>, <em>tensorA(v.0.36.2.1)</em>, <em>digest(v.0.6.36)</em>, <em>estimability(v.1.5.1)</em>, <em>timechange(v.0.3.0)</em>, <em>lifecycle(v.1.0.4)</em>, <em>StanHeaders(v.2.32.9)</em>, <em>survival(v.3.6-4)</em>, <em>magrittr(v.2.0.3)</em>, <em>posterior(v.1.5.0)</em>, <em>compiler(v.4.4.1)</em>, <em>rlang(v.1.1.4)</em>, <em>tools(v.4.4.1)</em>, <em>utf8(v.1.2.4)</em>, <em>yaml(v.2.3.8)</em>, <em>labeling(v.0.4.3)</em>, <em>bridgesampling(v.1.1-2)</em>, <em>htmlwidgets(v.1.6.4)</em>, <em>pkgbuild(v.1.4.4)</em>, <em>curl(v.5.2.1)</em>, <em>plyr(v.1.8.9)</em>, <em>multcomp(v.1.4-25)</em>, <em>abind(v.1.4-5)</em>, <em>withr(v.3.0.0)</em>, <em>grid(v.4.4.1)</em>, <em>stats4(v.4.4.1)</em>, <em>fansi(v.1.0.6)</em>, <em>xtable(v.1.8-4)</em>, <em>colorspace(v.2.1-0)</em>, <em>inline(v.0.3.19)</em>, <em>emmeans(v.1.10.2)</em>, <em>scales(v.1.3.0)</em>, <em>MASS(v.7.3-60.2)</em>, <em>cli(v.3.6.3)</em>, <em>mvtnorm(v.1.2-5)</em>, <em>rmarkdown(v.2.27)</em>, <em>generics(v.0.1.3)</em>, <em>RcppParallel(v.5.1.7)</em>, <em>rstudioapi(v.0.16.0)</em>, <em>reshape2(v.1.4.4)</em>, <em>tzdb(v.0.4.0)</em>, <em>pander(v.0.6.5)</em>, <em>rstan(v.2.32.6)</em>, <em>splines(v.4.4.1)</em>, <em>parallel(v.4.4.1)</em>, <em>matrixStats(v.1.3.0)</em>, <em>vctrs(v.0.6.5)</em>, <em>V8(v.4.4.2)</em>, <em>Matrix(v.1.7-0)</em>, <em>sandwich(v.3.1-0)</em>, <em>jsonlite(v.1.8.8)</em>, <em>hms(v.1.1.3)</em>, <em>arrayhelpers(v.1.1-0)</em>, <em>ggdist(v.3.3.2)</em>, <em>glue(v.1.7.0)</em>, <em>codetools(v.0.2-20)</em>, <em>distributional(v.0.4.0)</em>, <em>stringi(v.1.8.4)</em>, <em>gtable(v.0.3.5)</em>, <em>QuickJSR(v.1.2.2)</em>, <em>munsell(v.0.5.1)</em>, <em>pillar(v.1.9.0)</em>, <em>htmltools(v.0.5.8.1)</em>, <em>Brobdingnag(v.1.2-9)</em>, <em>R6(v.2.5.1)</em>, <em>rprojroot(v.2.0.4)</em>, <em>evaluate(v.0.24.0)</em>, <em>lattice(v.0.22-6)</em>, <em>backports(v.1.5.0)</em>, <em>rstantools(v.2.4.0)</em>, <em>coda(v.0.19-4.1)</em>, <em>gridExtra(v.2.3)</em>, <em>nlme(v.3.1-164)</em>, <em>checkmate(v.2.3.1)</em>, <em>xfun(v.0.45)</em>, <em>zoo(v.1.8-12)</em> and <em>pkgconfig(v.2.0.3)</em></p>
+<p><strong>other attached packages:</strong> <em>knitr(v.1.47)</em>, <em>bayesplot(v.1.11.1)</em>, <em>performance(v.0.12.4)</em>, <em>tidybayes(v.3.0.7)</em>, <em>here(v.1.0.1)</em>, <em>lubridate(v.1.9.3)</em>, <em>forcats(v.1.0.0)</em>, <em>stringr(v.1.5.1)</em>, <em>dplyr(v.1.1.4)</em>, <em>purrr(v.1.0.2)</em>, <em>readr(v.2.1.5)</em>, <em>tidyr(v.1.3.1)</em>, <em>tibble(v.3.2.1)</em>, <em>ggplot2(v.3.5.1)</em>, <em>tidyverse(v.2.0.0)</em>, <em>brms(v.2.21.0)</em> and <em>Rcpp(v.1.0.12)</em></p>
+<p><strong>loaded via a namespace (and not attached):</strong> <em>tidyselect(v.1.2.1)</em>, <em>svUnit(v.1.0.6)</em>, <em>farver(v.2.1.2)</em>, <em>loo(v.2.7.0)</em>, <em>fastmap(v.1.2.0)</em>, <em>TH.data(v.1.1-2)</em>, <em>tensorA(v.0.36.2.1)</em>, <em>digest(v.0.6.36)</em>, <em>estimability(v.1.5.1)</em>, <em>timechange(v.0.3.0)</em>, <em>lifecycle(v.1.0.4)</em>, <em>StanHeaders(v.2.32.9)</em>, <em>survival(v.3.6-4)</em>, <em>magrittr(v.2.0.3)</em>, <em>posterior(v.1.5.0)</em>, <em>compiler(v.4.4.1)</em>, <em>rlang(v.1.1.4)</em>, <em>tools(v.4.4.1)</em>, <em>utf8(v.1.2.4)</em>, <em>yaml(v.2.3.8)</em>, <em>labeling(v.0.4.3)</em>, <em>bridgesampling(v.1.1-2)</em>, <em>htmlwidgets(v.1.6.4)</em>, <em>pkgbuild(v.1.4.4)</em>, <em>curl(v.5.2.1)</em>, <em>plyr(v.1.8.9)</em>, <em>multcomp(v.1.4-25)</em>, <em>abind(v.1.4-5)</em>, <em>withr(v.3.0.0)</em>, <em>grid(v.4.4.1)</em>, <em>stats4(v.4.4.1)</em>, <em>fansi(v.1.0.6)</em>, <em>xtable(v.1.8-4)</em>, <em>colorspace(v.2.1-0)</em>, <em>inline(v.0.3.19)</em>, <em>emmeans(v.1.10.2)</em>, <em>scales(v.1.3.0)</em>, <em>MASS(v.7.3-60.2)</em>, <em>insight(v.0.20.5)</em>, <em>cli(v.3.6.3)</em>, <em>mvtnorm(v.1.2-5)</em>, <em>rmarkdown(v.2.27)</em>, <em>generics(v.0.1.3)</em>, <em>RcppParallel(v.5.1.7)</em>, <em>rstudioapi(v.0.16.0)</em>, <em>reshape2(v.1.4.4)</em>, <em>tzdb(v.0.4.0)</em>, <em>minqa(v.1.2.7)</em>, <em>pander(v.0.6.5)</em>, <em>rstan(v.2.32.6)</em>, <em>splines(v.4.4.1)</em>, <em>parallel(v.4.4.1)</em>, <em>matrixStats(v.1.3.0)</em>, <em>vctrs(v.0.6.5)</em>, <em>boot(v.1.3-30)</em>, <em>V8(v.4.4.2)</em>, <em>Matrix(v.1.7-0)</em>, <em>sandwich(v.3.1-0)</em>, <em>jsonlite(v.1.8.8)</em>, <em>hms(v.1.1.3)</em>, <em>arrayhelpers(v.1.1-0)</em>, <em>ggdist(v.3.3.2)</em>, <em>glue(v.1.7.0)</em>, <em>nloptr(v.2.1.1)</em>, <em>codetools(v.0.2-20)</em>, <em>distributional(v.0.4.0)</em>, <em>stringi(v.1.8.4)</em>, <em>gtable(v.0.3.5)</em>, <em>QuickJSR(v.1.2.2)</em>, <em>lme4(v.1.1-35.4)</em>, <em>munsell(v.0.5.1)</em>, <em>pillar(v.1.9.0)</em>, <em>htmltools(v.0.5.8.1)</em>, <em>Brobdingnag(v.1.2-9)</em>, <em>R6(v.2.5.1)</em>, <em>rprojroot(v.2.0.4)</em>, <em>evaluate(v.0.24.0)</em>, <em>lattice(v.0.22-6)</em>, <em>backports(v.1.5.0)</em>, <em>rstantools(v.2.4.0)</em>, <em>coda(v.0.19-4.1)</em>, <em>gridExtra(v.2.3)</em>, <em>nlme(v.3.1-164)</em>, <em>checkmate(v.2.3.1)</em>, <em>xfun(v.0.45)</em>, <em>zoo(v.1.8-12)</em> and <em>pkgconfig(v.2.0.3)</em></p>
 </div>
 </div>
 <!-- -->
@@ -1634,397 +1766,482 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
   }
 });
 </script><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
-<div class="sourceCode" id="cb48" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Robustness replication of *A Bayesian Meta-Analysis of the Acoustic Properties of Infant-Directed Speech*"</span></span>
-<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a><span class="an">author:</span><span class="co"> </span></span>
-<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a><span class="co"> - name: Björn S. Siepe</span></span>
-<span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a><span class="co">   orcid: 0000-0002-9558-4648</span></span>
-<span id="cb48-6"><a href="#cb48-6" aria-hidden="true" tabindex="-1"></a><span class="co">   affiliations: University of Marburg</span></span>
-<span id="cb48-7"><a href="#cb48-7" aria-hidden="true" tabindex="-1"></a><span class="co"> - name: Matthias Kloft</span></span>
-<span id="cb48-8"><a href="#cb48-8" aria-hidden="true" tabindex="-1"></a><span class="co">   orcid: 0000-0003-1845-6957</span></span>
-<span id="cb48-9"><a href="#cb48-9" aria-hidden="true" tabindex="-1"></a><span class="co">   affiliations: University of Marburg  </span></span>
-<span id="cb48-10"><a href="#cb48-10" aria-hidden="true" tabindex="-1"></a><span class="co"> - name: Semih Can Aktepe</span></span>
-<span id="cb48-11"><a href="#cb48-11" aria-hidden="true" tabindex="-1"></a><span class="co">   orcid: 0000-0002-4776-9138</span></span>
-<span id="cb48-12"><a href="#cb48-12" aria-hidden="true" tabindex="-1"></a><span class="co">   affiliations: University of Marburg</span></span>
-<span id="cb48-13"><a href="#cb48-13" aria-hidden="true" tabindex="-1"></a><span class="co"> - name: Daniel W. Heck</span></span>
-<span id="cb48-14"><a href="#cb48-14" aria-hidden="true" tabindex="-1"></a><span class="co">   orcid: 0000-0002-6302-9252</span></span>
-<span id="cb48-15"><a href="#cb48-15" aria-hidden="true" tabindex="-1"></a><span class="co">   affiliations: University of Marburg</span></span>
-<span id="cb48-16"><a href="#cb48-16" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> "`r Sys.Date()`"</span></span>
-<span id="cb48-17"><a href="#cb48-17" aria-hidden="true" tabindex="-1"></a><span class="an">format:</span></span>
-<span id="cb48-18"><a href="#cb48-18" aria-hidden="true" tabindex="-1"></a><span class="co">  html:</span></span>
-<span id="cb48-19"><a href="#cb48-19" aria-hidden="true" tabindex="-1"></a><span class="co">    toc: true</span></span>
-<span id="cb48-20"><a href="#cb48-20" aria-hidden="true" tabindex="-1"></a><span class="co">    number-sections: true</span></span>
-<span id="cb48-21"><a href="#cb48-21" aria-hidden="true" tabindex="-1"></a><span class="co">    theme: cosmo</span></span>
-<span id="cb48-22"><a href="#cb48-22" aria-hidden="true" tabindex="-1"></a><span class="co">    code-fold: true</span></span>
-<span id="cb48-23"><a href="#cb48-23" aria-hidden="true" tabindex="-1"></a><span class="co">    code-tools: true</span></span>
-<span id="cb48-24"><a href="#cb48-24" aria-hidden="true" tabindex="-1"></a><span class="co">    code-summary: "Show the code"</span></span>
-<span id="cb48-25"><a href="#cb48-25" aria-hidden="true" tabindex="-1"></a><span class="co">    fig-width: 7</span></span>
-<span id="cb48-26"><a href="#cb48-26" aria-hidden="true" tabindex="-1"></a><span class="co">    fig-height: 4.5</span></span>
-<span id="cb48-27"><a href="#cb48-27" aria-hidden="true" tabindex="-1"></a><span class="co">    fig-align: "center"</span></span>
-<span id="cb48-28"><a href="#cb48-28" aria-hidden="true" tabindex="-1"></a><span class="co">    embed-resoureces: true</span></span>
-<span id="cb48-29"><a href="#cb48-29" aria-hidden="true" tabindex="-1"></a><span class="an">execute:</span></span>
-<span id="cb48-30"><a href="#cb48-30" aria-hidden="true" tabindex="-1"></a><span class="co">  message: false</span></span>
-<span id="cb48-31"><a href="#cb48-31" aria-hidden="true" tabindex="-1"></a><span class="co">  warning: false</span></span>
-<span id="cb48-32"><a href="#cb48-32" aria-hidden="true" tabindex="-1"></a><span class="co">  eval: true</span></span>
-<span id="cb48-33"><a href="#cb48-33" aria-hidden="true" tabindex="-1"></a><span class="an">params:</span><span class="co"> </span></span>
-<span id="cb48-34"><a href="#cb48-34" aria-hidden="true" tabindex="-1"></a><span class="co">  refit: false</span></span>
-<span id="cb48-35"><a href="#cb48-35" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb48-36"><a href="#cb48-36" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-37"><a href="#cb48-37" aria-hidden="true" tabindex="-1"></a><span class="fu"># Preparation</span></span>
-<span id="cb48-38"><a href="#cb48-38" aria-hidden="true" tabindex="-1"></a>Load the necessary packages and set the seed for reproducibility.</span>
-<span id="cb48-39"><a href="#cb48-39" aria-hidden="true" tabindex="-1"></a><span class="in">```{r setup}</span></span>
-<span id="cb48-40"><a href="#cb48-40" aria-hidden="true" tabindex="-1"></a><span class="in">library(brms)</span></span>
-<span id="cb48-41"><a href="#cb48-41" aria-hidden="true" tabindex="-1"></a><span class="in">library(tidyverse)</span></span>
-<span id="cb48-42"><a href="#cb48-42" aria-hidden="true" tabindex="-1"></a><span class="in">library(here)</span></span>
-<span id="cb48-43"><a href="#cb48-43" aria-hidden="true" tabindex="-1"></a><span class="in"># library(renv)</span></span>
-<span id="cb48-44"><a href="#cb48-44" aria-hidden="true" tabindex="-1"></a><span class="in">library(tidybayes)</span></span>
-<span id="cb48-45"><a href="#cb48-45" aria-hidden="true" tabindex="-1"></a><span class="in">#library(RoBMA)</span></span>
-<span id="cb48-46"><a href="#cb48-46" aria-hidden="true" tabindex="-1"></a><span class="in">#library(osfr)</span></span>
-<span id="cb48-47"><a href="#cb48-47" aria-hidden="true" tabindex="-1"></a><span class="in">library(bayesplot)</span></span>
-<span id="cb48-48"><a href="#cb48-48" aria-hidden="true" tabindex="-1"></a><span class="in">#library(pander)</span></span>
-<span id="cb48-49"><a href="#cb48-49" aria-hidden="true" tabindex="-1"></a><span class="in">library(knitr)</span></span>
-<span id="cb48-50"><a href="#cb48-50" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-51"><a href="#cb48-51" aria-hidden="true" tabindex="-1"></a><span class="in">set.seed(35032)</span></span>
-<span id="cb48-52"><a href="#cb48-52" aria-hidden="true" tabindex="-1"></a><span class="in">```</span> </span>
-<span id="cb48-53"><a href="#cb48-53" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-54"><a href="#cb48-54" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-55"><a href="#cb48-55" aria-hidden="true" tabindex="-1"></a><span class="fu"># Sampler Settings</span></span>
-<span id="cb48-56"><a href="#cb48-56" aria-hidden="true" tabindex="-1"></a>The authors used relatively unorthodox sampler settings by choosing an <span class="in">`adapt_delta`</span> of 0.99 and a <span class="in">`max_treedepth`</span> of 20. We will compare fitting the models selected as best by the authors to the same models with more standard sampler settings, as this might give us an insight into potential issues with model complexity.</span>
-<span id="cb48-57"><a href="#cb48-57" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-58"><a href="#cb48-58" aria-hidden="true" tabindex="-1"></a><span class="fu">## F0</span></span>
-<span id="cb48-59"><a href="#cb48-59" aria-hidden="true" tabindex="-1"></a>The authors selected the model with language, age, task &amp; environment as predictors as the best model. </span>
-<span id="cb48-60"><a href="#cb48-60" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-61"><a href="#cb48-61" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-62"><a href="#cb48-62" aria-hidden="true" tabindex="-1"></a>We fit the model with typical settings on the first dataset to diagnose what is going wrong</span>
-<span id="cb48-63"><a href="#cb48-63" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-66"><a href="#cb48-66" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-67"><a href="#cb48-67" aria-hidden="true" tabindex="-1"></a>data_F0_multiple_final <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"data"</span>,<span class="st">"data_F0_multiple_final.RData"</span>))</span>
-<span id="cb48-68"><a href="#cb48-68" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-69"><a href="#cb48-69" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-70"><a href="#cb48-70" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-71"><a href="#cb48-71" aria-hidden="true" tabindex="-1"></a><span class="in">```{r f0-sampler}</span></span>
-<span id="cb48-72"><a href="#cb48-72" aria-hidden="true" tabindex="-1"></a><span class="in">#| eval: !expr params$refit</span></span>
-<span id="cb48-73"><a href="#cb48-73" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-74"><a href="#cb48-74" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-75"><a href="#cb48-75" aria-hidden="true" tabindex="-1"></a><span class="in">baseline_te &lt;- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Age_months + </span></span>
-<span id="cb48-76"><a href="#cb48-76" aria-hidden="true" tabindex="-1"></a><span class="in">                    Language + Environment + Task + (1 | Language/id_site/measurement_num))</span></span>
-<span id="cb48-77"><a href="#cb48-77" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-78"><a href="#cb48-78" aria-hidden="true" tabindex="-1"></a><span class="in">priors1 &lt;- c(brms::prior(normal(0, 2.5), class = Intercept),</span></span>
-<span id="cb48-79"><a href="#cb48-79" aria-hidden="true" tabindex="-1"></a><span class="in">             brms::prior(normal(1, 1), class = sd),</span></span>
-<span id="cb48-80"><a href="#cb48-80" aria-hidden="true" tabindex="-1"></a><span class="in">             brms::prior(normal(0, 1), class = b),</span></span>
-<span id="cb48-81"><a href="#cb48-81" aria-hidden="true" tabindex="-1"></a><span class="in">             brms::prior(normal(0, 0.05), class = b, coef = "Age_months"),</span></span>
-<span id="cb48-82"><a href="#cb48-82" aria-hidden="true" tabindex="-1"></a><span class="in">             brms::prior(gamma(2, 0.1), class = nu))</span></span>
-<span id="cb48-83"><a href="#cb48-83" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-84"><a href="#cb48-84" aria-hidden="true" tabindex="-1"></a><span class="in">F0_task_environment_language_age_m_sampler &lt;- </span></span>
-<span id="cb48-85"><a href="#cb48-85" aria-hidden="true" tabindex="-1"></a><span class="in">  brm(</span></span>
-<span id="cb48-86"><a href="#cb48-86" aria-hidden="true" tabindex="-1"></a><span class="in">    baseline_te,</span></span>
-<span id="cb48-87"><a href="#cb48-87" aria-hidden="true" tabindex="-1"></a><span class="in">    save_pars = save_pars(all = TRUE),</span></span>
-<span id="cb48-88"><a href="#cb48-88" aria-hidden="true" tabindex="-1"></a><span class="in">    data = data_F0_multiple_final[[1]], </span></span>
-<span id="cb48-89"><a href="#cb48-89" aria-hidden="true" tabindex="-1"></a><span class="in">    family = student,</span></span>
-<span id="cb48-90"><a href="#cb48-90" aria-hidden="true" tabindex="-1"></a><span class="in">    prior = priors1,</span></span>
-<span id="cb48-91"><a href="#cb48-91" aria-hidden="true" tabindex="-1"></a><span class="in">    iter = 1000, </span></span>
-<span id="cb48-92"><a href="#cb48-92" aria-hidden="true" tabindex="-1"></a><span class="in">    warmup = 500,</span></span>
-<span id="cb48-93"><a href="#cb48-93" aria-hidden="true" tabindex="-1"></a><span class="in">    refresh = 1000,</span></span>
-<span id="cb48-94"><a href="#cb48-94" aria-hidden="true" tabindex="-1"></a><span class="in">    cores = 4,</span></span>
-<span id="cb48-95"><a href="#cb48-95" aria-hidden="true" tabindex="-1"></a><span class="in">    chains = 4</span></span>
-<span id="cb48-96"><a href="#cb48-96" aria-hidden="true" tabindex="-1"></a><span class="in">    )</span></span>
-<span id="cb48-97"><a href="#cb48-97" aria-hidden="true" tabindex="-1"></a><span class="in">saveRDS(F0_task_environment_language_age_m_sampler, here("output", "replication", "F0_task_environment_language_age_m_sampler.rds"))</span></span>
-<span id="cb48-98"><a href="#cb48-98" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-99"><a href="#cb48-99" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-102"><a href="#cb48-102" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-103"><a href="#cb48-103" aria-hidden="true" tabindex="-1"></a>F0_task_environment_language_age_m_sampler <span class="ot">&lt;-</span> </span>
-<span id="cb48-104"><a href="#cb48-104" aria-hidden="true" tabindex="-1"></a>  <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"F0_task_environment_language_age_m_sampler.rds"</span>))</span>
-<span id="cb48-105"><a href="#cb48-105" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-106"><a href="#cb48-106" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-107"><a href="#cb48-107" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-110"><a href="#cb48-110" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-111"><a href="#cb48-111" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(F0_task_environment_language_age_m_sampler)</span>
-<span id="cb48-112"><a href="#cb48-112" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-113"><a href="#cb48-113" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-114"><a href="#cb48-114" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Error variance is zero! We incorporate the residual in the model.</span>
-<span id="cb48-115"><a href="#cb48-115" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-116"><a href="#cb48-116" aria-hidden="true" tabindex="-1"></a><span class="fu">### Re-fit with residual variance</span></span>
-<span id="cb48-117"><a href="#cb48-117" aria-hidden="true" tabindex="-1"></a><span class="in">```{r }</span></span>
-<span id="cb48-118"><a href="#cb48-118" aria-hidden="true" tabindex="-1"></a><span class="in">#| eval: !expr params$refit</span></span>
-<span id="cb48-119"><a href="#cb48-119" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-120"><a href="#cb48-120" aria-hidden="true" tabindex="-1"></a><span class="in">model_sigma_true &lt;-  </span></span>
-<span id="cb48-121"><a href="#cb48-121" aria-hidden="true" tabindex="-1"></a><span class="in">  bf(Effect_Size | se(Effect_Size_se, sigma = TRUE) ~ </span></span>
-<span id="cb48-122"><a href="#cb48-122" aria-hidden="true" tabindex="-1"></a><span class="in">       1 + Age_months + Language + Environment + Task + </span></span>
-<span id="cb48-123"><a href="#cb48-123" aria-hidden="true" tabindex="-1"></a><span class="in">       (1 | Language/id_site/measurement_num))</span></span>
-<span id="cb48-124"><a href="#cb48-124" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-125"><a href="#cb48-125" aria-hidden="true" tabindex="-1"></a><span class="in">priors1 &lt;- c(brms::prior(normal(0, 2.5), class = Intercept),</span></span>
-<span id="cb48-126"><a href="#cb48-126" aria-hidden="true" tabindex="-1"></a><span class="in">             brms::prior(normal(1, 1), class = sd),</span></span>
-<span id="cb48-127"><a href="#cb48-127" aria-hidden="true" tabindex="-1"></a><span class="in">             brms::prior(normal(0, 1), class = b),</span></span>
-<span id="cb48-128"><a href="#cb48-128" aria-hidden="true" tabindex="-1"></a><span class="in">             brms::prior(normal(0, 0.05), class = b, coef = "Age_months"),</span></span>
-<span id="cb48-129"><a href="#cb48-129" aria-hidden="true" tabindex="-1"></a><span class="in">             brms::prior(gamma(2, 0.1), class = nu))</span></span>
-<span id="cb48-130"><a href="#cb48-130" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-131"><a href="#cb48-131" aria-hidden="true" tabindex="-1"></a><span class="in">fit_sigma_true &lt;- </span></span>
-<span id="cb48-132"><a href="#cb48-132" aria-hidden="true" tabindex="-1"></a><span class="in">  brm(</span></span>
-<span id="cb48-133"><a href="#cb48-133" aria-hidden="true" tabindex="-1"></a><span class="in">    model_sigma_true,</span></span>
-<span id="cb48-134"><a href="#cb48-134" aria-hidden="true" tabindex="-1"></a><span class="in">    save_pars = save_pars(all = TRUE),</span></span>
-<span id="cb48-135"><a href="#cb48-135" aria-hidden="true" tabindex="-1"></a><span class="in">    data = data_F0_multiple_final[[1]], </span></span>
-<span id="cb48-136"><a href="#cb48-136" aria-hidden="true" tabindex="-1"></a><span class="in">    family = student,</span></span>
-<span id="cb48-137"><a href="#cb48-137" aria-hidden="true" tabindex="-1"></a><span class="in">    prior = priors1,</span></span>
-<span id="cb48-138"><a href="#cb48-138" aria-hidden="true" tabindex="-1"></a><span class="in">    iter = 1000, </span></span>
-<span id="cb48-139"><a href="#cb48-139" aria-hidden="true" tabindex="-1"></a><span class="in">    warmup = 500,</span></span>
-<span id="cb48-140"><a href="#cb48-140" aria-hidden="true" tabindex="-1"></a><span class="in">    refresh = 1000,</span></span>
-<span id="cb48-141"><a href="#cb48-141" aria-hidden="true" tabindex="-1"></a><span class="in">    cores = 4,</span></span>
-<span id="cb48-142"><a href="#cb48-142" aria-hidden="true" tabindex="-1"></a><span class="in">    chains = 4</span></span>
-<span id="cb48-143"><a href="#cb48-143" aria-hidden="true" tabindex="-1"></a><span class="in">    )</span></span>
-<span id="cb48-144"><a href="#cb48-144" aria-hidden="true" tabindex="-1"></a><span class="in">saveRDS(fit_sigma_true, here("output", "replication", "fit_sigma_true.rds"))</span></span>
-<span id="cb48-145"><a href="#cb48-145" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-146"><a href="#cb48-146" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-149"><a href="#cb48-149" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-150"><a href="#cb48-150" aria-hidden="true" tabindex="-1"></a>fit_sigma_true <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_sigma_true.rds"</span>))</span>
-<span id="cb48-151"><a href="#cb48-151" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-152"><a href="#cb48-152" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-153"><a href="#cb48-153" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-156"><a href="#cb48-156" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-157"><a href="#cb48-157" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(fit_sigma_true)</span>
-<span id="cb48-158"><a href="#cb48-158" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-159"><a href="#cb48-159" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-160"><a href="#cb48-160" aria-hidden="true" tabindex="-1"></a>Let's make the priors a little less informative</span>
-<span id="cb48-161"><a href="#cb48-161" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-162"><a href="#cb48-162" aria-hidden="true" tabindex="-1"></a><span class="in">```{r }</span></span>
-<span id="cb48-163"><a href="#cb48-163" aria-hidden="true" tabindex="-1"></a><span class="in">#| eval: !expr params$refit</span></span>
-<span id="cb48-164"><a href="#cb48-164" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-165"><a href="#cb48-165" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-166"><a href="#cb48-166" aria-hidden="true" tabindex="-1"></a><span class="in">model_uninformative &lt;-  </span></span>
-<span id="cb48-167"><a href="#cb48-167" aria-hidden="true" tabindex="-1"></a><span class="in">  bf(Effect_Size | se(Effect_Size_se, sigma = TRUE) ~ </span></span>
-<span id="cb48-168"><a href="#cb48-168" aria-hidden="true" tabindex="-1"></a><span class="in">       1 + Age_months + Language + Environment + Task + </span></span>
-<span id="cb48-169"><a href="#cb48-169" aria-hidden="true" tabindex="-1"></a><span class="in">       (1 | Language/id_site/measurement_num))</span></span>
-<span id="cb48-170"><a href="#cb48-170" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-171"><a href="#cb48-171" aria-hidden="true" tabindex="-1"></a><span class="in">fit_uninformative &lt;-</span></span>
-<span id="cb48-172"><a href="#cb48-172" aria-hidden="true" tabindex="-1"></a><span class="in">  brm(</span></span>
-<span id="cb48-173"><a href="#cb48-173" aria-hidden="true" tabindex="-1"></a><span class="in">    model_uninformative,</span></span>
-<span id="cb48-174"><a href="#cb48-174" aria-hidden="true" tabindex="-1"></a><span class="in">    save_pars = save_pars(all = TRUE),</span></span>
-<span id="cb48-175"><a href="#cb48-175" aria-hidden="true" tabindex="-1"></a><span class="in">    data = data_F0_multiple_final[[1]],</span></span>
-<span id="cb48-176"><a href="#cb48-176" aria-hidden="true" tabindex="-1"></a><span class="in">    family = student,</span></span>
-<span id="cb48-177"><a href="#cb48-177" aria-hidden="true" tabindex="-1"></a><span class="in">    iter = 1000,</span></span>
-<span id="cb48-178"><a href="#cb48-178" aria-hidden="true" tabindex="-1"></a><span class="in">    warmup = 500,</span></span>
-<span id="cb48-179"><a href="#cb48-179" aria-hidden="true" tabindex="-1"></a><span class="in">    refresh = 1000,</span></span>
-<span id="cb48-180"><a href="#cb48-180" aria-hidden="true" tabindex="-1"></a><span class="in">    cores = 4,</span></span>
-<span id="cb48-181"><a href="#cb48-181" aria-hidden="true" tabindex="-1"></a><span class="in">    chains = 4</span></span>
-<span id="cb48-182"><a href="#cb48-182" aria-hidden="true" tabindex="-1"></a><span class="in">  )</span></span>
-<span id="cb48-183"><a href="#cb48-183" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-184"><a href="#cb48-184" aria-hidden="true" tabindex="-1"></a><span class="in">saveRDS(fit_uninformative, here("output", "replication", "fit_uninformative.rds"))</span></span>
-<span id="cb48-185"><a href="#cb48-185" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-186"><a href="#cb48-186" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-189"><a href="#cb48-189" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-190"><a href="#cb48-190" aria-hidden="true" tabindex="-1"></a>fit_uninformative <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_uninformative.rds"</span>))</span>
-<span id="cb48-191"><a href="#cb48-191" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-192"><a href="#cb48-192" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-195"><a href="#cb48-195" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-196"><a href="#cb48-196" aria-hidden="true" tabindex="-1"></a><span class="fu">prior_summary</span>(fit_uninformative)</span>
-<span id="cb48-197"><a href="#cb48-197" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-198"><a href="#cb48-198" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-201"><a href="#cb48-201" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-202"><a href="#cb48-202" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(fit_uninformative)</span>
-<span id="cb48-203"><a href="#cb48-203" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-204"><a href="#cb48-204" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-205"><a href="#cb48-205" aria-hidden="true" tabindex="-1"></a>The model seems to be robust to the priors.</span>
-<span id="cb48-206"><a href="#cb48-206" aria-hidden="true" tabindex="-1"></a>Let us build the model from simple to complex to see where the divergences occur </span>
-<span id="cb48-207"><a href="#cb48-207" aria-hidden="true" tabindex="-1"></a>first.</span>
-<span id="cb48-208"><a href="#cb48-208" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-209"><a href="#cb48-209" aria-hidden="true" tabindex="-1"></a><span class="fu">### Intercept-only Model</span></span>
-<span id="cb48-212"><a href="#cb48-212" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-213"><a href="#cb48-213" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: !expr params$refit</span></span>
-<span id="cb48-214"><a href="#cb48-214" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-215"><a href="#cb48-215" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-216"><a href="#cb48-216" aria-hidden="true" tabindex="-1"></a>model_step_0 <span class="ot">&lt;-</span>  </span>
-<span id="cb48-217"><a href="#cb48-217" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bf</span>(Effect_Size <span class="sc">|</span> <span class="fu">se</span>(Effect_Size_se, <span class="at">sigma =</span> <span class="cn">TRUE</span>) <span class="sc">~</span> <span class="dv">1</span>)</span>
-<span id="cb48-218"><a href="#cb48-218" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-219"><a href="#cb48-219" aria-hidden="true" tabindex="-1"></a>fit_step_0 <span class="ot">&lt;-</span> </span>
-<span id="cb48-220"><a href="#cb48-220" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm</span>(</span>
-<span id="cb48-221"><a href="#cb48-221" aria-hidden="true" tabindex="-1"></a>    model_step_0,</span>
-<span id="cb48-222"><a href="#cb48-222" aria-hidden="true" tabindex="-1"></a>    <span class="at">save_pars =</span> <span class="fu">save_pars</span>(<span class="at">all =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb48-223"><a href="#cb48-223" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> data_F0_multiple_final[[<span class="dv">1</span>]], </span>
-<span id="cb48-224"><a href="#cb48-224" aria-hidden="true" tabindex="-1"></a>    <span class="at">family =</span> student,</span>
-<span id="cb48-225"><a href="#cb48-225" aria-hidden="true" tabindex="-1"></a>    <span class="at">iter =</span> <span class="dv">1000</span>, </span>
-<span id="cb48-226"><a href="#cb48-226" aria-hidden="true" tabindex="-1"></a>    <span class="at">warmup =</span> <span class="dv">500</span>,</span>
-<span id="cb48-227"><a href="#cb48-227" aria-hidden="true" tabindex="-1"></a>    <span class="at">refresh =</span> <span class="dv">1000</span>,</span>
-<span id="cb48-228"><a href="#cb48-228" aria-hidden="true" tabindex="-1"></a>    <span class="at">cores =</span> <span class="dv">4</span>,</span>
-<span id="cb48-229"><a href="#cb48-229" aria-hidden="true" tabindex="-1"></a>    <span class="at">chains =</span> <span class="dv">4</span></span>
-<span id="cb48-230"><a href="#cb48-230" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb48-231"><a href="#cb48-231" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(fit_step_0, <span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_step_0.rds"</span>))</span>
-<span id="cb48-232"><a href="#cb48-232" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-233"><a href="#cb48-233" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-236"><a href="#cb48-236" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-237"><a href="#cb48-237" aria-hidden="true" tabindex="-1"></a>fit_step_0 <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_step_0.rds"</span>))</span>
-<span id="cb48-238"><a href="#cb48-238" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-239"><a href="#cb48-239" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-240"><a href="#cb48-240" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-243"><a href="#cb48-243" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-244"><a href="#cb48-244" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(fit_step_0)</span>
-<span id="cb48-245"><a href="#cb48-245" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-246"><a href="#cb48-246" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-247"><a href="#cb48-247" aria-hidden="true" tabindex="-1"></a>Everything seems to be fine here. Let's add the random intercept for language.</span>
-<span id="cb48-248"><a href="#cb48-248" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-249"><a href="#cb48-249" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-250"><a href="#cb48-250" aria-hidden="true" tabindex="-1"></a><span class="fu">### Model: Intercept + Random Intercept for Language</span></span>
-<span id="cb48-253"><a href="#cb48-253" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-254"><a href="#cb48-254" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: !expr params$refit</span></span>
-<span id="cb48-255"><a href="#cb48-255" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-256"><a href="#cb48-256" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-257"><a href="#cb48-257" aria-hidden="true" tabindex="-1"></a>model_step_1 <span class="ot">&lt;-</span>  </span>
-<span id="cb48-258"><a href="#cb48-258" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bf</span>(Effect_Size <span class="sc">|</span> <span class="fu">se</span>(Effect_Size_se, <span class="at">sigma =</span> <span class="cn">TRUE</span>) <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> Language))</span>
-<span id="cb48-259"><a href="#cb48-259" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-260"><a href="#cb48-260" aria-hidden="true" tabindex="-1"></a>fit_step_1 <span class="ot">&lt;-</span> </span>
-<span id="cb48-261"><a href="#cb48-261" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm</span>(</span>
-<span id="cb48-262"><a href="#cb48-262" aria-hidden="true" tabindex="-1"></a>    model_step_1,</span>
-<span id="cb48-263"><a href="#cb48-263" aria-hidden="true" tabindex="-1"></a>    <span class="at">save_pars =</span> <span class="fu">save_pars</span>(<span class="at">all =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb48-264"><a href="#cb48-264" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> data_F0_multiple_final[[<span class="dv">1</span>]], </span>
-<span id="cb48-265"><a href="#cb48-265" aria-hidden="true" tabindex="-1"></a>    <span class="at">family =</span> student,</span>
-<span id="cb48-266"><a href="#cb48-266" aria-hidden="true" tabindex="-1"></a>    <span class="at">iter =</span> <span class="dv">1000</span>, </span>
-<span id="cb48-267"><a href="#cb48-267" aria-hidden="true" tabindex="-1"></a>    <span class="at">warmup =</span> <span class="dv">500</span>,</span>
-<span id="cb48-268"><a href="#cb48-268" aria-hidden="true" tabindex="-1"></a>    <span class="at">refresh =</span> <span class="dv">1000</span>,</span>
-<span id="cb48-269"><a href="#cb48-269" aria-hidden="true" tabindex="-1"></a>    <span class="at">cores =</span> <span class="dv">4</span>,</span>
-<span id="cb48-270"><a href="#cb48-270" aria-hidden="true" tabindex="-1"></a>    <span class="at">chains =</span> <span class="dv">4</span></span>
-<span id="cb48-271"><a href="#cb48-271" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb48-272"><a href="#cb48-272" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(fit_step_1, <span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_step_1.rds"</span>))</span>
-<span id="cb48-273"><a href="#cb48-273" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-274"><a href="#cb48-274" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-277"><a href="#cb48-277" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-278"><a href="#cb48-278" aria-hidden="true" tabindex="-1"></a>fit_step_1 <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_step_1.rds"</span>))</span>
-<span id="cb48-279"><a href="#cb48-279" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-280"><a href="#cb48-280" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-283"><a href="#cb48-283" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-284"><a href="#cb48-284" aria-hidden="true" tabindex="-1"></a><span class="fu">prior_summary</span>(fit_step_1)</span>
-<span id="cb48-285"><a href="#cb48-285" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-286"><a href="#cb48-286" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-287"><a href="#cb48-287" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-290"><a href="#cb48-290" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-291"><a href="#cb48-291" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(fit_step_1)</span>
-<span id="cb48-292"><a href="#cb48-292" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-293"><a href="#cb48-293" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-294"><a href="#cb48-294" aria-hidden="true" tabindex="-1"></a>Everything seems to be fine here. Let's add the random intercept for site.</span>
-<span id="cb48-295"><a href="#cb48-295" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-296"><a href="#cb48-296" aria-hidden="true" tabindex="-1"></a><span class="fu">### Model: Intercept + Random Intercept for Language + Random Intercept for Site</span></span>
-<span id="cb48-299"><a href="#cb48-299" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-300"><a href="#cb48-300" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: !expr params$refit</span></span>
-<span id="cb48-301"><a href="#cb48-301" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-302"><a href="#cb48-302" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-303"><a href="#cb48-303" aria-hidden="true" tabindex="-1"></a>model_step_2 <span class="ot">&lt;-</span></span>
-<span id="cb48-304"><a href="#cb48-304" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bf</span>(Effect_Size <span class="sc">|</span> <span class="fu">se</span>(Effect_Size_se, <span class="at">sigma =</span> <span class="cn">TRUE</span>) <span class="sc">~</span></span>
-<span id="cb48-305"><a href="#cb48-305" aria-hidden="true" tabindex="-1"></a>       <span class="dv">1</span> <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> Language <span class="sc">/</span> id_site))</span>
-<span id="cb48-306"><a href="#cb48-306" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-307"><a href="#cb48-307" aria-hidden="true" tabindex="-1"></a>fit_step_2 <span class="ot">&lt;-</span></span>
-<span id="cb48-308"><a href="#cb48-308" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm</span>(</span>
-<span id="cb48-309"><a href="#cb48-309" aria-hidden="true" tabindex="-1"></a>    model_step_2,</span>
-<span id="cb48-310"><a href="#cb48-310" aria-hidden="true" tabindex="-1"></a>    <span class="at">save_pars =</span> <span class="fu">save_pars</span>(<span class="at">all =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb48-311"><a href="#cb48-311" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> data_F0_multiple_final[[<span class="dv">1</span>]], </span>
-<span id="cb48-312"><a href="#cb48-312" aria-hidden="true" tabindex="-1"></a>    <span class="at">family =</span> student,</span>
-<span id="cb48-313"><a href="#cb48-313" aria-hidden="true" tabindex="-1"></a>    <span class="at">iter =</span> <span class="dv">1000</span>, </span>
-<span id="cb48-314"><a href="#cb48-314" aria-hidden="true" tabindex="-1"></a>    <span class="at">warmup =</span> <span class="dv">500</span>,</span>
-<span id="cb48-315"><a href="#cb48-315" aria-hidden="true" tabindex="-1"></a>    <span class="at">refresh =</span> <span class="dv">1000</span>,</span>
-<span id="cb48-316"><a href="#cb48-316" aria-hidden="true" tabindex="-1"></a>    <span class="at">cores =</span> <span class="dv">4</span>,</span>
-<span id="cb48-317"><a href="#cb48-317" aria-hidden="true" tabindex="-1"></a>    <span class="at">chains =</span> <span class="dv">4</span></span>
-<span id="cb48-318"><a href="#cb48-318" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb48-319"><a href="#cb48-319" aria-hidden="true" tabindex="-1"></a><span class="fu">prior_summary</span>(fit_step_2)</span>
-<span id="cb48-320"><a href="#cb48-320" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(fit_step_2, <span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_step_2.rds"</span>))</span>
-<span id="cb48-321"><a href="#cb48-321" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-322"><a href="#cb48-322" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-325"><a href="#cb48-325" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-326"><a href="#cb48-326" aria-hidden="true" tabindex="-1"></a>fit_step_2 <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_step_2.rds"</span>))</span>
-<span id="cb48-327"><a href="#cb48-327" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-328"><a href="#cb48-328" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-329"><a href="#cb48-329" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-332"><a href="#cb48-332" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-333"><a href="#cb48-333" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(fit_step_2)</span>
-<span id="cb48-334"><a href="#cb48-334" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-335"><a href="#cb48-335" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-336"><a href="#cb48-336" aria-hidden="true" tabindex="-1"></a>The nested random effects structure seems to be problematic. </span>
-<span id="cb48-337"><a href="#cb48-337" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-340"><a href="#cb48-340" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-341"><a href="#cb48-341" aria-hidden="true" tabindex="-1"></a>bayesplot<span class="sc">::</span><span class="fu">mcmc_pairs</span>(</span>
-<span id="cb48-342"><a href="#cb48-342" aria-hidden="true" tabindex="-1"></a>  fit_step_2,</span>
-<span id="cb48-343"><a href="#cb48-343" aria-hidden="true" tabindex="-1"></a>  <span class="at">np =</span> <span class="fu">nuts_params</span>(fit_step_2),</span>
-<span id="cb48-344"><a href="#cb48-344" aria-hidden="true" tabindex="-1"></a>  <span class="at">pars =</span> <span class="fu">c</span>(<span class="st">"Intercept"</span>, <span class="st">"sigma"</span>, <span class="st">"nu"</span>, <span class="st">"sd_Language__Intercept"</span>, <span class="st">"sd_Language:id_site__Intercept"</span>),</span>
-<span id="cb48-345"><a href="#cb48-345" aria-hidden="true" tabindex="-1"></a>  <span class="at">transform =</span> <span class="fu">list</span>(),</span>
-<span id="cb48-346"><a href="#cb48-346" aria-hidden="true" tabindex="-1"></a><span class="at">off_diag_args =</span> <span class="fu">list</span>(<span class="at">size =</span> <span class="fl">0.7</span>, <span class="at">alpha =</span> <span class="fl">0.1</span>))</span>
-<span id="cb48-347"><a href="#cb48-347" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-348"><a href="#cb48-348" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-349"><a href="#cb48-349" aria-hidden="true" tabindex="-1"></a><span class="fu">### Check Frequencies for Language and Site</span></span>
-<span id="cb48-352"><a href="#cb48-352" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-353"><a href="#cb48-353" aria-hidden="true" tabindex="-1"></a>freq_language <span class="ot">&lt;-</span> <span class="fu">table</span>(data_F0_multiple_final[[<span class="dv">1</span>]]<span class="sc">$</span>Language) <span class="sc">%&gt;%</span> <span class="fu">table</span>()</span>
-<span id="cb48-354"><a href="#cb48-354" aria-hidden="true" tabindex="-1"></a>freq_language</span>
-<span id="cb48-355"><a href="#cb48-355" aria-hidden="true" tabindex="-1"></a>freq_language[<span class="dv">1</span>] <span class="sc">/</span> <span class="fu">sum</span>(freq_language)</span>
-<span id="cb48-356"><a href="#cb48-356" aria-hidden="true" tabindex="-1"></a>freq_site <span class="ot">&lt;-</span> <span class="fu">table</span>(data_F0_multiple_final[[<span class="dv">1</span>]]<span class="sc">$</span>id_site) <span class="sc">%&gt;%</span> <span class="fu">table</span>()</span>
-<span id="cb48-357"><a href="#cb48-357" aria-hidden="true" tabindex="-1"></a>freq_site</span>
-<span id="cb48-358"><a href="#cb48-358" aria-hidden="true" tabindex="-1"></a>freq_site[<span class="dv">1</span>] <span class="sc">/</span> <span class="fu">sum</span>(freq_site)</span>
-<span id="cb48-359"><a href="#cb48-359" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-360"><a href="#cb48-360" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-361"><a href="#cb48-361" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-362"><a href="#cb48-362" aria-hidden="true" tabindex="-1"></a><span class="fu">### Model: Intercept + Random Intercept for Language + Fixed Effects for Covariates</span></span>
-<span id="cb48-365"><a href="#cb48-365" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-366"><a href="#cb48-366" aria-hidden="true" tabindex="-1"></a>model_step_3 <span class="ot">&lt;-</span>  </span>
-<span id="cb48-367"><a href="#cb48-367" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bf</span>(Effect_Size <span class="sc">|</span> <span class="fu">se</span>(Effect_Size_se, <span class="at">sigma =</span> <span class="cn">TRUE</span>) <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> </span>
-<span id="cb48-368"><a href="#cb48-368" aria-hidden="true" tabindex="-1"></a>       Age_months <span class="sc">+</span> Environment <span class="sc">+</span> Task <span class="sc">+</span></span>
-<span id="cb48-369"><a href="#cb48-369" aria-hidden="true" tabindex="-1"></a>       (<span class="dv">1</span> <span class="sc">|</span> Language))</span>
-<span id="cb48-370"><a href="#cb48-370" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-371"><a href="#cb48-371" aria-hidden="true" tabindex="-1"></a>fit_step_3 <span class="ot">&lt;-</span> </span>
-<span id="cb48-372"><a href="#cb48-372" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm</span>(</span>
-<span id="cb48-373"><a href="#cb48-373" aria-hidden="true" tabindex="-1"></a>    model_step_3,</span>
-<span id="cb48-374"><a href="#cb48-374" aria-hidden="true" tabindex="-1"></a>    <span class="at">save_pars =</span> <span class="fu">save_pars</span>(<span class="at">all =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb48-375"><a href="#cb48-375" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> data_F0_multiple_final[[<span class="dv">1</span>]], </span>
-<span id="cb48-376"><a href="#cb48-376" aria-hidden="true" tabindex="-1"></a>    <span class="at">family =</span> student,</span>
-<span id="cb48-377"><a href="#cb48-377" aria-hidden="true" tabindex="-1"></a>    <span class="at">iter =</span> <span class="dv">1000</span>, </span>
-<span id="cb48-378"><a href="#cb48-378" aria-hidden="true" tabindex="-1"></a>    <span class="at">warmup =</span> <span class="dv">500</span>,</span>
-<span id="cb48-379"><a href="#cb48-379" aria-hidden="true" tabindex="-1"></a>    <span class="at">refresh =</span> <span class="dv">1000</span>,</span>
-<span id="cb48-380"><a href="#cb48-380" aria-hidden="true" tabindex="-1"></a>    <span class="at">cores =</span> <span class="dv">4</span>,</span>
-<span id="cb48-381"><a href="#cb48-381" aria-hidden="true" tabindex="-1"></a>    <span class="at">chains =</span> <span class="dv">4</span></span>
-<span id="cb48-382"><a href="#cb48-382" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb48-383"><a href="#cb48-383" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-384"><a href="#cb48-384" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-387"><a href="#cb48-387" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-388"><a href="#cb48-388" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(fit_step_3), <span class="at">digits =</span> <span class="dv">3</span>)</span>
-<span id="cb48-389"><a href="#cb48-389" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-390"><a href="#cb48-390" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-391"><a href="#cb48-391" aria-hidden="true" tabindex="-1"></a><span class="fu">## Fit again with multiple data sets</span></span>
-<span id="cb48-392"><a href="#cb48-392" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-395"><a href="#cb48-395" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-396"><a href="#cb48-396" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: !expr params$refit</span></span>
-<span id="cb48-397"><a href="#cb48-397" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-398"><a href="#cb48-398" aria-hidden="true" tabindex="-1"></a>fit_step_3_multiple <span class="ot">&lt;-</span> </span>
-<span id="cb48-399"><a href="#cb48-399" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm_multiple</span>(</span>
-<span id="cb48-400"><a href="#cb48-400" aria-hidden="true" tabindex="-1"></a>    model_step_3,</span>
-<span id="cb48-401"><a href="#cb48-401" aria-hidden="true" tabindex="-1"></a>    <span class="at">save_pars =</span> <span class="fu">save_pars</span>(<span class="at">all =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb48-402"><a href="#cb48-402" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> data_F0_multiple_final, </span>
-<span id="cb48-403"><a href="#cb48-403" aria-hidden="true" tabindex="-1"></a>    <span class="at">family =</span> student,</span>
-<span id="cb48-404"><a href="#cb48-404" aria-hidden="true" tabindex="-1"></a>    <span class="at">iter =</span> <span class="dv">1000</span>, </span>
-<span id="cb48-405"><a href="#cb48-405" aria-hidden="true" tabindex="-1"></a>    <span class="at">warmup =</span> <span class="dv">500</span>,</span>
-<span id="cb48-406"><a href="#cb48-406" aria-hidden="true" tabindex="-1"></a>    <span class="at">refresh =</span> <span class="dv">1000</span>,</span>
-<span id="cb48-407"><a href="#cb48-407" aria-hidden="true" tabindex="-1"></a>    <span class="at">cores =</span> <span class="dv">4</span>,</span>
-<span id="cb48-408"><a href="#cb48-408" aria-hidden="true" tabindex="-1"></a>    <span class="at">chains =</span> <span class="dv">4</span></span>
-<span id="cb48-409"><a href="#cb48-409" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb48-410"><a href="#cb48-410" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(fit_step_3_multiple, <span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_step_3_multiple.rds"</span>))</span>
-<span id="cb48-411"><a href="#cb48-411" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-412"><a href="#cb48-412" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-415"><a href="#cb48-415" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-416"><a href="#cb48-416" aria-hidden="true" tabindex="-1"></a>fit_step_3_multiple <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_step_3_multiple.rds"</span>))</span>
-<span id="cb48-417"><a href="#cb48-417" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-418"><a href="#cb48-418" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-421"><a href="#cb48-421" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-422"><a href="#cb48-422" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(fit_step_3_multiple), <span class="at">digits =</span> <span class="dv">3</span>)</span>
-<span id="cb48-423"><a href="#cb48-423" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-424"><a href="#cb48-424" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-425"><a href="#cb48-425" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-426"><a href="#cb48-426" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-427"><a href="#cb48-427" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-428"><a href="#cb48-428" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-429"><a href="#cb48-429" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-430"><a href="#cb48-430" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-431"><a href="#cb48-431" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-432"><a href="#cb48-432" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-433"><a href="#cb48-433" aria-hidden="true" tabindex="-1"></a><span class="fu"># Session Info</span></span>
-<span id="cb48-434"><a href="#cb48-434" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-437"><a href="#cb48-437" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-438"><a href="#cb48-438" aria-hidden="true" tabindex="-1"></a>pander<span class="sc">::</span><span class="fu">pander</span>(<span class="fu">sessionInfo</span>())</span>
-<span id="cb48-439"><a href="#cb48-439" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-440"><a href="#cb48-440" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-441"><a href="#cb48-441" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-442"><a href="#cb48-442" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-443"><a href="#cb48-443" aria-hidden="true" tabindex="-1"></a></span>
+<div class="sourceCode" id="cb60" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Robustness replication of *A Bayesian Meta-Analysis of the Acoustic Properties of Infant-Directed Speech*"</span></span>
+<span id="cb60-3"><a href="#cb60-3" aria-hidden="true" tabindex="-1"></a><span class="an">author:</span><span class="co"> </span></span>
+<span id="cb60-4"><a href="#cb60-4" aria-hidden="true" tabindex="-1"></a><span class="co"> - name: Björn S. Siepe</span></span>
+<span id="cb60-5"><a href="#cb60-5" aria-hidden="true" tabindex="-1"></a><span class="co">   orcid: 0000-0002-9558-4648</span></span>
+<span id="cb60-6"><a href="#cb60-6" aria-hidden="true" tabindex="-1"></a><span class="co">   affiliations: University of Marburg</span></span>
+<span id="cb60-7"><a href="#cb60-7" aria-hidden="true" tabindex="-1"></a><span class="co"> - name: Matthias Kloft</span></span>
+<span id="cb60-8"><a href="#cb60-8" aria-hidden="true" tabindex="-1"></a><span class="co">   orcid: 0000-0003-1845-6957</span></span>
+<span id="cb60-9"><a href="#cb60-9" aria-hidden="true" tabindex="-1"></a><span class="co">   affiliations: University of Marburg  </span></span>
+<span id="cb60-10"><a href="#cb60-10" aria-hidden="true" tabindex="-1"></a><span class="co"> - name: Semih Can Aktepe</span></span>
+<span id="cb60-11"><a href="#cb60-11" aria-hidden="true" tabindex="-1"></a><span class="co">   orcid: 0000-0002-4776-9138</span></span>
+<span id="cb60-12"><a href="#cb60-12" aria-hidden="true" tabindex="-1"></a><span class="co">   affiliations: University of Marburg</span></span>
+<span id="cb60-13"><a href="#cb60-13" aria-hidden="true" tabindex="-1"></a><span class="co"> - name: Daniel W. Heck</span></span>
+<span id="cb60-14"><a href="#cb60-14" aria-hidden="true" tabindex="-1"></a><span class="co">   orcid: 0000-0002-6302-9252</span></span>
+<span id="cb60-15"><a href="#cb60-15" aria-hidden="true" tabindex="-1"></a><span class="co">   affiliations: University of Marburg</span></span>
+<span id="cb60-16"><a href="#cb60-16" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> "`r Sys.Date()`"</span></span>
+<span id="cb60-17"><a href="#cb60-17" aria-hidden="true" tabindex="-1"></a><span class="an">format:</span></span>
+<span id="cb60-18"><a href="#cb60-18" aria-hidden="true" tabindex="-1"></a><span class="co">  html:</span></span>
+<span id="cb60-19"><a href="#cb60-19" aria-hidden="true" tabindex="-1"></a><span class="co">    toc: true</span></span>
+<span id="cb60-20"><a href="#cb60-20" aria-hidden="true" tabindex="-1"></a><span class="co">    number-sections: true</span></span>
+<span id="cb60-21"><a href="#cb60-21" aria-hidden="true" tabindex="-1"></a><span class="co">    theme: cosmo</span></span>
+<span id="cb60-22"><a href="#cb60-22" aria-hidden="true" tabindex="-1"></a><span class="co">    code-fold: true</span></span>
+<span id="cb60-23"><a href="#cb60-23" aria-hidden="true" tabindex="-1"></a><span class="co">    code-tools: true</span></span>
+<span id="cb60-24"><a href="#cb60-24" aria-hidden="true" tabindex="-1"></a><span class="co">    code-summary: "Show the code"</span></span>
+<span id="cb60-25"><a href="#cb60-25" aria-hidden="true" tabindex="-1"></a><span class="co">    fig-width: 7</span></span>
+<span id="cb60-26"><a href="#cb60-26" aria-hidden="true" tabindex="-1"></a><span class="co">    fig-height: 4.5</span></span>
+<span id="cb60-27"><a href="#cb60-27" aria-hidden="true" tabindex="-1"></a><span class="co">    fig-align: "center"</span></span>
+<span id="cb60-28"><a href="#cb60-28" aria-hidden="true" tabindex="-1"></a><span class="co">    embed-ressources: true</span></span>
+<span id="cb60-29"><a href="#cb60-29" aria-hidden="true" tabindex="-1"></a><span class="an">execute:</span></span>
+<span id="cb60-30"><a href="#cb60-30" aria-hidden="true" tabindex="-1"></a><span class="co">  message: false</span></span>
+<span id="cb60-31"><a href="#cb60-31" aria-hidden="true" tabindex="-1"></a><span class="co">  warning: false</span></span>
+<span id="cb60-32"><a href="#cb60-32" aria-hidden="true" tabindex="-1"></a><span class="co">  eval: true</span></span>
+<span id="cb60-33"><a href="#cb60-33" aria-hidden="true" tabindex="-1"></a><span class="an">params:</span><span class="co"> </span></span>
+<span id="cb60-34"><a href="#cb60-34" aria-hidden="true" tabindex="-1"></a><span class="co">  refit: false</span></span>
+<span id="cb60-35"><a href="#cb60-35" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb60-36"><a href="#cb60-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-37"><a href="#cb60-37" aria-hidden="true" tabindex="-1"></a><span class="fu"># Preparation</span></span>
+<span id="cb60-38"><a href="#cb60-38" aria-hidden="true" tabindex="-1"></a>Load the necessary packages and set the seed for reproducibility.</span>
+<span id="cb60-39"><a href="#cb60-39" aria-hidden="true" tabindex="-1"></a><span class="in">```{r setup}</span></span>
+<span id="cb60-40"><a href="#cb60-40" aria-hidden="true" tabindex="-1"></a><span class="in">library(brms)</span></span>
+<span id="cb60-41"><a href="#cb60-41" aria-hidden="true" tabindex="-1"></a><span class="in">library(tidyverse)</span></span>
+<span id="cb60-42"><a href="#cb60-42" aria-hidden="true" tabindex="-1"></a><span class="in">library(here)</span></span>
+<span id="cb60-43"><a href="#cb60-43" aria-hidden="true" tabindex="-1"></a><span class="in"># library(renv)</span></span>
+<span id="cb60-44"><a href="#cb60-44" aria-hidden="true" tabindex="-1"></a><span class="in">library(tidybayes)</span></span>
+<span id="cb60-45"><a href="#cb60-45" aria-hidden="true" tabindex="-1"></a><span class="in">library(performance)</span></span>
+<span id="cb60-46"><a href="#cb60-46" aria-hidden="true" tabindex="-1"></a><span class="in">#library(RoBMA)</span></span>
+<span id="cb60-47"><a href="#cb60-47" aria-hidden="true" tabindex="-1"></a><span class="in">#library(osfr)</span></span>
+<span id="cb60-48"><a href="#cb60-48" aria-hidden="true" tabindex="-1"></a><span class="in">library(bayesplot)</span></span>
+<span id="cb60-49"><a href="#cb60-49" aria-hidden="true" tabindex="-1"></a><span class="in">#library(pander)</span></span>
+<span id="cb60-50"><a href="#cb60-50" aria-hidden="true" tabindex="-1"></a><span class="in">library(knitr)</span></span>
+<span id="cb60-51"><a href="#cb60-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-52"><a href="#cb60-52" aria-hidden="true" tabindex="-1"></a><span class="in">set.seed(35032)</span></span>
+<span id="cb60-53"><a href="#cb60-53" aria-hidden="true" tabindex="-1"></a><span class="in">```</span> </span>
+<span id="cb60-54"><a href="#cb60-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-55"><a href="#cb60-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-56"><a href="#cb60-56" aria-hidden="true" tabindex="-1"></a><span class="fu"># Sampler Settings</span></span>
+<span id="cb60-57"><a href="#cb60-57" aria-hidden="true" tabindex="-1"></a>The authors used relatively unorthodox sampler settings by choosing an <span class="in">`adapt_delta`</span> of 0.99 and a <span class="in">`max_treedepth`</span> of 20. We will compare fitting the models selected as best by the authors to the same models with more standard sampler settings, as this might give us an insight into potential issues with model complexity.</span>
+<span id="cb60-58"><a href="#cb60-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-59"><a href="#cb60-59" aria-hidden="true" tabindex="-1"></a><span class="fu">## F0</span></span>
+<span id="cb60-60"><a href="#cb60-60" aria-hidden="true" tabindex="-1"></a>The authors selected the model with language, age, task &amp; environment as predictors as the best model. </span>
+<span id="cb60-61"><a href="#cb60-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-62"><a href="#cb60-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-63"><a href="#cb60-63" aria-hidden="true" tabindex="-1"></a>We fit the model with typical settings on the first dataset to diagnose what is going wrong</span>
+<span id="cb60-64"><a href="#cb60-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-67"><a href="#cb60-67" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-68"><a href="#cb60-68" aria-hidden="true" tabindex="-1"></a>data_F0_multiple_final <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"data"</span>,<span class="st">"data_F0_multiple_final.RData"</span>))</span>
+<span id="cb60-69"><a href="#cb60-69" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-70"><a href="#cb60-70" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-71"><a href="#cb60-71" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-72"><a href="#cb60-72" aria-hidden="true" tabindex="-1"></a><span class="in">```{r f0-sampler}</span></span>
+<span id="cb60-73"><a href="#cb60-73" aria-hidden="true" tabindex="-1"></a><span class="in">#| eval: !expr params$refit</span></span>
+<span id="cb60-74"><a href="#cb60-74" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-75"><a href="#cb60-75" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-76"><a href="#cb60-76" aria-hidden="true" tabindex="-1"></a><span class="in">baseline_te &lt;- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Age_months + </span></span>
+<span id="cb60-77"><a href="#cb60-77" aria-hidden="true" tabindex="-1"></a><span class="in">                    Language + Environment + Task + (1 | Language/id_site/measurement_num))</span></span>
+<span id="cb60-78"><a href="#cb60-78" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-79"><a href="#cb60-79" aria-hidden="true" tabindex="-1"></a><span class="in">priors1 &lt;- c(brms::prior(normal(0, 2.5), class = Intercept),</span></span>
+<span id="cb60-80"><a href="#cb60-80" aria-hidden="true" tabindex="-1"></a><span class="in">             brms::prior(normal(1, 1), class = sd),</span></span>
+<span id="cb60-81"><a href="#cb60-81" aria-hidden="true" tabindex="-1"></a><span class="in">             brms::prior(normal(0, 1), class = b),</span></span>
+<span id="cb60-82"><a href="#cb60-82" aria-hidden="true" tabindex="-1"></a><span class="in">             brms::prior(normal(0, 0.05), class = b, coef = "Age_months"),</span></span>
+<span id="cb60-83"><a href="#cb60-83" aria-hidden="true" tabindex="-1"></a><span class="in">             brms::prior(gamma(2, 0.1), class = nu))</span></span>
+<span id="cb60-84"><a href="#cb60-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-85"><a href="#cb60-85" aria-hidden="true" tabindex="-1"></a><span class="in">F0_task_environment_language_age_m_sampler &lt;- </span></span>
+<span id="cb60-86"><a href="#cb60-86" aria-hidden="true" tabindex="-1"></a><span class="in">  brm(</span></span>
+<span id="cb60-87"><a href="#cb60-87" aria-hidden="true" tabindex="-1"></a><span class="in">    baseline_te,</span></span>
+<span id="cb60-88"><a href="#cb60-88" aria-hidden="true" tabindex="-1"></a><span class="in">    save_pars = save_pars(all = TRUE),</span></span>
+<span id="cb60-89"><a href="#cb60-89" aria-hidden="true" tabindex="-1"></a><span class="in">    data = data_F0_multiple_final[[1]], </span></span>
+<span id="cb60-90"><a href="#cb60-90" aria-hidden="true" tabindex="-1"></a><span class="in">    family = student,</span></span>
+<span id="cb60-91"><a href="#cb60-91" aria-hidden="true" tabindex="-1"></a><span class="in">    prior = priors1,</span></span>
+<span id="cb60-92"><a href="#cb60-92" aria-hidden="true" tabindex="-1"></a><span class="in">    iter = 1000, </span></span>
+<span id="cb60-93"><a href="#cb60-93" aria-hidden="true" tabindex="-1"></a><span class="in">    warmup = 500,</span></span>
+<span id="cb60-94"><a href="#cb60-94" aria-hidden="true" tabindex="-1"></a><span class="in">    refresh = 1000,</span></span>
+<span id="cb60-95"><a href="#cb60-95" aria-hidden="true" tabindex="-1"></a><span class="in">    cores = 4,</span></span>
+<span id="cb60-96"><a href="#cb60-96" aria-hidden="true" tabindex="-1"></a><span class="in">    chains = 4</span></span>
+<span id="cb60-97"><a href="#cb60-97" aria-hidden="true" tabindex="-1"></a><span class="in">    )</span></span>
+<span id="cb60-98"><a href="#cb60-98" aria-hidden="true" tabindex="-1"></a><span class="in">saveRDS(F0_task_environment_language_age_m_sampler, here("output", "replication", "F0_task_environment_language_age_m_sampler.rds"))</span></span>
+<span id="cb60-99"><a href="#cb60-99" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-100"><a href="#cb60-100" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-103"><a href="#cb60-103" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-104"><a href="#cb60-104" aria-hidden="true" tabindex="-1"></a>F0_task_environment_language_age_m_sampler <span class="ot">&lt;-</span> </span>
+<span id="cb60-105"><a href="#cb60-105" aria-hidden="true" tabindex="-1"></a>  <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"F0_task_environment_language_age_m_sampler.rds"</span>))</span>
+<span id="cb60-106"><a href="#cb60-106" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-107"><a href="#cb60-107" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-108"><a href="#cb60-108" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-111"><a href="#cb60-111" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-112"><a href="#cb60-112" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(F0_task_environment_language_age_m_sampler)</span>
+<span id="cb60-113"><a href="#cb60-113" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-114"><a href="#cb60-114" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-115"><a href="#cb60-115" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Error variance is zero! We incorporate the residual in the model.</span>
+<span id="cb60-116"><a href="#cb60-116" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-117"><a href="#cb60-117" aria-hidden="true" tabindex="-1"></a><span class="fu">### Re-fit with residual variance</span></span>
+<span id="cb60-118"><a href="#cb60-118" aria-hidden="true" tabindex="-1"></a><span class="in">```{r }</span></span>
+<span id="cb60-119"><a href="#cb60-119" aria-hidden="true" tabindex="-1"></a><span class="in">#| eval: !expr params$refit</span></span>
+<span id="cb60-120"><a href="#cb60-120" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-121"><a href="#cb60-121" aria-hidden="true" tabindex="-1"></a><span class="in">model_sigma_true &lt;-  </span></span>
+<span id="cb60-122"><a href="#cb60-122" aria-hidden="true" tabindex="-1"></a><span class="in">  bf(Effect_Size | se(Effect_Size_se, sigma = TRUE) ~ </span></span>
+<span id="cb60-123"><a href="#cb60-123" aria-hidden="true" tabindex="-1"></a><span class="in">       1 + Age_months + Language + Environment + Task + </span></span>
+<span id="cb60-124"><a href="#cb60-124" aria-hidden="true" tabindex="-1"></a><span class="in">       (1 | Language/id_site/measurement_num))</span></span>
+<span id="cb60-125"><a href="#cb60-125" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-126"><a href="#cb60-126" aria-hidden="true" tabindex="-1"></a><span class="in">priors1 &lt;- c(brms::prior(normal(0, 2.5), class = Intercept),</span></span>
+<span id="cb60-127"><a href="#cb60-127" aria-hidden="true" tabindex="-1"></a><span class="in">             brms::prior(normal(1, 1), class = sd),</span></span>
+<span id="cb60-128"><a href="#cb60-128" aria-hidden="true" tabindex="-1"></a><span class="in">             brms::prior(normal(0, 1), class = b),</span></span>
+<span id="cb60-129"><a href="#cb60-129" aria-hidden="true" tabindex="-1"></a><span class="in">             brms::prior(normal(0, 0.05), class = b, coef = "Age_months"),</span></span>
+<span id="cb60-130"><a href="#cb60-130" aria-hidden="true" tabindex="-1"></a><span class="in">             brms::prior(gamma(2, 0.1), class = nu))</span></span>
+<span id="cb60-131"><a href="#cb60-131" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-132"><a href="#cb60-132" aria-hidden="true" tabindex="-1"></a><span class="in">fit_sigma_true &lt;- </span></span>
+<span id="cb60-133"><a href="#cb60-133" aria-hidden="true" tabindex="-1"></a><span class="in">  brm(</span></span>
+<span id="cb60-134"><a href="#cb60-134" aria-hidden="true" tabindex="-1"></a><span class="in">    model_sigma_true,</span></span>
+<span id="cb60-135"><a href="#cb60-135" aria-hidden="true" tabindex="-1"></a><span class="in">    save_pars = save_pars(all = TRUE),</span></span>
+<span id="cb60-136"><a href="#cb60-136" aria-hidden="true" tabindex="-1"></a><span class="in">    data = data_F0_multiple_final[[1]], </span></span>
+<span id="cb60-137"><a href="#cb60-137" aria-hidden="true" tabindex="-1"></a><span class="in">    family = student,</span></span>
+<span id="cb60-138"><a href="#cb60-138" aria-hidden="true" tabindex="-1"></a><span class="in">    prior = priors1,</span></span>
+<span id="cb60-139"><a href="#cb60-139" aria-hidden="true" tabindex="-1"></a><span class="in">    iter = 1000, </span></span>
+<span id="cb60-140"><a href="#cb60-140" aria-hidden="true" tabindex="-1"></a><span class="in">    warmup = 500,</span></span>
+<span id="cb60-141"><a href="#cb60-141" aria-hidden="true" tabindex="-1"></a><span class="in">    refresh = 1000,</span></span>
+<span id="cb60-142"><a href="#cb60-142" aria-hidden="true" tabindex="-1"></a><span class="in">    cores = 4,</span></span>
+<span id="cb60-143"><a href="#cb60-143" aria-hidden="true" tabindex="-1"></a><span class="in">    chains = 4</span></span>
+<span id="cb60-144"><a href="#cb60-144" aria-hidden="true" tabindex="-1"></a><span class="in">    )</span></span>
+<span id="cb60-145"><a href="#cb60-145" aria-hidden="true" tabindex="-1"></a><span class="in">saveRDS(fit_sigma_true, here("output", "replication", "fit_sigma_true.rds"))</span></span>
+<span id="cb60-146"><a href="#cb60-146" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-147"><a href="#cb60-147" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-150"><a href="#cb60-150" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-151"><a href="#cb60-151" aria-hidden="true" tabindex="-1"></a>fit_sigma_true <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_sigma_true.rds"</span>))</span>
+<span id="cb60-152"><a href="#cb60-152" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-153"><a href="#cb60-153" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-154"><a href="#cb60-154" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-157"><a href="#cb60-157" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-158"><a href="#cb60-158" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(fit_sigma_true)</span>
+<span id="cb60-159"><a href="#cb60-159" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-160"><a href="#cb60-160" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-161"><a href="#cb60-161" aria-hidden="true" tabindex="-1"></a>Let's make the priors a little less informative</span>
+<span id="cb60-162"><a href="#cb60-162" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-163"><a href="#cb60-163" aria-hidden="true" tabindex="-1"></a><span class="in">```{r }</span></span>
+<span id="cb60-164"><a href="#cb60-164" aria-hidden="true" tabindex="-1"></a><span class="in">#| eval: !expr params$refit</span></span>
+<span id="cb60-165"><a href="#cb60-165" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-166"><a href="#cb60-166" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-167"><a href="#cb60-167" aria-hidden="true" tabindex="-1"></a><span class="in">model_uninformative &lt;-  </span></span>
+<span id="cb60-168"><a href="#cb60-168" aria-hidden="true" tabindex="-1"></a><span class="in">  bf(Effect_Size | se(Effect_Size_se, sigma = TRUE) ~ </span></span>
+<span id="cb60-169"><a href="#cb60-169" aria-hidden="true" tabindex="-1"></a><span class="in">       1 + Age_months + Language + Environment + Task + </span></span>
+<span id="cb60-170"><a href="#cb60-170" aria-hidden="true" tabindex="-1"></a><span class="in">       (1 | Language/id_site/measurement_num))</span></span>
+<span id="cb60-171"><a href="#cb60-171" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-172"><a href="#cb60-172" aria-hidden="true" tabindex="-1"></a><span class="in">fit_uninformative &lt;-</span></span>
+<span id="cb60-173"><a href="#cb60-173" aria-hidden="true" tabindex="-1"></a><span class="in">  brm(</span></span>
+<span id="cb60-174"><a href="#cb60-174" aria-hidden="true" tabindex="-1"></a><span class="in">    model_uninformative,</span></span>
+<span id="cb60-175"><a href="#cb60-175" aria-hidden="true" tabindex="-1"></a><span class="in">    save_pars = save_pars(all = TRUE),</span></span>
+<span id="cb60-176"><a href="#cb60-176" aria-hidden="true" tabindex="-1"></a><span class="in">    data = data_F0_multiple_final[[1]],</span></span>
+<span id="cb60-177"><a href="#cb60-177" aria-hidden="true" tabindex="-1"></a><span class="in">    family = student,</span></span>
+<span id="cb60-178"><a href="#cb60-178" aria-hidden="true" tabindex="-1"></a><span class="in">    iter = 1000,</span></span>
+<span id="cb60-179"><a href="#cb60-179" aria-hidden="true" tabindex="-1"></a><span class="in">    warmup = 500,</span></span>
+<span id="cb60-180"><a href="#cb60-180" aria-hidden="true" tabindex="-1"></a><span class="in">    refresh = 1000,</span></span>
+<span id="cb60-181"><a href="#cb60-181" aria-hidden="true" tabindex="-1"></a><span class="in">    cores = 4,</span></span>
+<span id="cb60-182"><a href="#cb60-182" aria-hidden="true" tabindex="-1"></a><span class="in">    chains = 4</span></span>
+<span id="cb60-183"><a href="#cb60-183" aria-hidden="true" tabindex="-1"></a><span class="in">  )</span></span>
+<span id="cb60-184"><a href="#cb60-184" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-185"><a href="#cb60-185" aria-hidden="true" tabindex="-1"></a><span class="in">saveRDS(fit_uninformative, here("output", "replication", "fit_uninformative.rds"))</span></span>
+<span id="cb60-186"><a href="#cb60-186" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-187"><a href="#cb60-187" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-190"><a href="#cb60-190" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-191"><a href="#cb60-191" aria-hidden="true" tabindex="-1"></a>fit_uninformative <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_uninformative.rds"</span>))</span>
+<span id="cb60-192"><a href="#cb60-192" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-193"><a href="#cb60-193" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-196"><a href="#cb60-196" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-197"><a href="#cb60-197" aria-hidden="true" tabindex="-1"></a><span class="fu">prior_summary</span>(fit_uninformative)</span>
+<span id="cb60-198"><a href="#cb60-198" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-199"><a href="#cb60-199" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-202"><a href="#cb60-202" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-203"><a href="#cb60-203" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(fit_uninformative)</span>
+<span id="cb60-204"><a href="#cb60-204" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-205"><a href="#cb60-205" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-206"><a href="#cb60-206" aria-hidden="true" tabindex="-1"></a>The model seems to be robust to the priors.</span>
+<span id="cb60-207"><a href="#cb60-207" aria-hidden="true" tabindex="-1"></a>Let us build the model from simple to complex to see where the divergences occur </span>
+<span id="cb60-208"><a href="#cb60-208" aria-hidden="true" tabindex="-1"></a>first.</span>
+<span id="cb60-209"><a href="#cb60-209" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-210"><a href="#cb60-210" aria-hidden="true" tabindex="-1"></a><span class="fu">### Intercept-only Model</span></span>
+<span id="cb60-213"><a href="#cb60-213" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-214"><a href="#cb60-214" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: !expr params$refit</span></span>
+<span id="cb60-215"><a href="#cb60-215" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-216"><a href="#cb60-216" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-217"><a href="#cb60-217" aria-hidden="true" tabindex="-1"></a>model_step_0 <span class="ot">&lt;-</span>  </span>
+<span id="cb60-218"><a href="#cb60-218" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bf</span>(Effect_Size <span class="sc">|</span> <span class="fu">se</span>(Effect_Size_se, <span class="at">sigma =</span> <span class="cn">TRUE</span>) <span class="sc">~</span> <span class="dv">1</span>)</span>
+<span id="cb60-219"><a href="#cb60-219" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-220"><a href="#cb60-220" aria-hidden="true" tabindex="-1"></a>fit_step_0 <span class="ot">&lt;-</span> </span>
+<span id="cb60-221"><a href="#cb60-221" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm</span>(</span>
+<span id="cb60-222"><a href="#cb60-222" aria-hidden="true" tabindex="-1"></a>    model_step_0,</span>
+<span id="cb60-223"><a href="#cb60-223" aria-hidden="true" tabindex="-1"></a>    <span class="at">save_pars =</span> <span class="fu">save_pars</span>(<span class="at">all =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb60-224"><a href="#cb60-224" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> data_F0_multiple_final[[<span class="dv">1</span>]], </span>
+<span id="cb60-225"><a href="#cb60-225" aria-hidden="true" tabindex="-1"></a>    <span class="at">family =</span> student,</span>
+<span id="cb60-226"><a href="#cb60-226" aria-hidden="true" tabindex="-1"></a>    <span class="at">iter =</span> <span class="dv">1000</span>, </span>
+<span id="cb60-227"><a href="#cb60-227" aria-hidden="true" tabindex="-1"></a>    <span class="at">warmup =</span> <span class="dv">500</span>,</span>
+<span id="cb60-228"><a href="#cb60-228" aria-hidden="true" tabindex="-1"></a>    <span class="at">refresh =</span> <span class="dv">1000</span>,</span>
+<span id="cb60-229"><a href="#cb60-229" aria-hidden="true" tabindex="-1"></a>    <span class="at">cores =</span> <span class="dv">4</span>,</span>
+<span id="cb60-230"><a href="#cb60-230" aria-hidden="true" tabindex="-1"></a>    <span class="at">chains =</span> <span class="dv">4</span></span>
+<span id="cb60-231"><a href="#cb60-231" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb60-232"><a href="#cb60-232" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(fit_step_0, <span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_step_0.rds"</span>))</span>
+<span id="cb60-233"><a href="#cb60-233" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-234"><a href="#cb60-234" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-237"><a href="#cb60-237" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-238"><a href="#cb60-238" aria-hidden="true" tabindex="-1"></a>fit_step_0 <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_step_0.rds"</span>))</span>
+<span id="cb60-239"><a href="#cb60-239" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-240"><a href="#cb60-240" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-241"><a href="#cb60-241" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-244"><a href="#cb60-244" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-245"><a href="#cb60-245" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(fit_step_0)</span>
+<span id="cb60-246"><a href="#cb60-246" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-247"><a href="#cb60-247" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-248"><a href="#cb60-248" aria-hidden="true" tabindex="-1"></a>Everything seems to be fine here. Let's add the random intercept for language.</span>
+<span id="cb60-249"><a href="#cb60-249" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-250"><a href="#cb60-250" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-251"><a href="#cb60-251" aria-hidden="true" tabindex="-1"></a><span class="fu">### Model: Intercept + Random Intercept for Language</span></span>
+<span id="cb60-254"><a href="#cb60-254" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-255"><a href="#cb60-255" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: !expr params$refit</span></span>
+<span id="cb60-256"><a href="#cb60-256" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-257"><a href="#cb60-257" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-258"><a href="#cb60-258" aria-hidden="true" tabindex="-1"></a>model_step_1 <span class="ot">&lt;-</span>  </span>
+<span id="cb60-259"><a href="#cb60-259" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bf</span>(Effect_Size <span class="sc">|</span> <span class="fu">se</span>(Effect_Size_se, <span class="at">sigma =</span> <span class="cn">TRUE</span>) <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> Language))</span>
+<span id="cb60-260"><a href="#cb60-260" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-261"><a href="#cb60-261" aria-hidden="true" tabindex="-1"></a>fit_step_1 <span class="ot">&lt;-</span> </span>
+<span id="cb60-262"><a href="#cb60-262" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm</span>(</span>
+<span id="cb60-263"><a href="#cb60-263" aria-hidden="true" tabindex="-1"></a>    model_step_1,</span>
+<span id="cb60-264"><a href="#cb60-264" aria-hidden="true" tabindex="-1"></a>    <span class="at">save_pars =</span> <span class="fu">save_pars</span>(<span class="at">all =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb60-265"><a href="#cb60-265" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> data_F0_multiple_final[[<span class="dv">1</span>]], </span>
+<span id="cb60-266"><a href="#cb60-266" aria-hidden="true" tabindex="-1"></a>    <span class="at">family =</span> student,</span>
+<span id="cb60-267"><a href="#cb60-267" aria-hidden="true" tabindex="-1"></a>    <span class="at">iter =</span> <span class="dv">1000</span>, </span>
+<span id="cb60-268"><a href="#cb60-268" aria-hidden="true" tabindex="-1"></a>    <span class="at">warmup =</span> <span class="dv">500</span>,</span>
+<span id="cb60-269"><a href="#cb60-269" aria-hidden="true" tabindex="-1"></a>    <span class="at">refresh =</span> <span class="dv">1000</span>,</span>
+<span id="cb60-270"><a href="#cb60-270" aria-hidden="true" tabindex="-1"></a>    <span class="at">cores =</span> <span class="dv">4</span>,</span>
+<span id="cb60-271"><a href="#cb60-271" aria-hidden="true" tabindex="-1"></a>    <span class="at">chains =</span> <span class="dv">4</span></span>
+<span id="cb60-272"><a href="#cb60-272" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb60-273"><a href="#cb60-273" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(fit_step_1, <span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_step_1.rds"</span>))</span>
+<span id="cb60-274"><a href="#cb60-274" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-275"><a href="#cb60-275" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-278"><a href="#cb60-278" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-279"><a href="#cb60-279" aria-hidden="true" tabindex="-1"></a>fit_step_1 <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_step_1.rds"</span>))</span>
+<span id="cb60-280"><a href="#cb60-280" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-281"><a href="#cb60-281" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-284"><a href="#cb60-284" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-285"><a href="#cb60-285" aria-hidden="true" tabindex="-1"></a><span class="fu">prior_summary</span>(fit_step_1)</span>
+<span id="cb60-286"><a href="#cb60-286" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-287"><a href="#cb60-287" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-288"><a href="#cb60-288" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-291"><a href="#cb60-291" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-292"><a href="#cb60-292" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(fit_step_1)</span>
+<span id="cb60-293"><a href="#cb60-293" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-294"><a href="#cb60-294" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-295"><a href="#cb60-295" aria-hidden="true" tabindex="-1"></a>Everything seems to be fine here. Let's add the random intercept for site.</span>
+<span id="cb60-296"><a href="#cb60-296" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-297"><a href="#cb60-297" aria-hidden="true" tabindex="-1"></a><span class="fu">### Model: Intercept + Random Intercept for Language + Random Intercept for Site</span></span>
+<span id="cb60-300"><a href="#cb60-300" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-301"><a href="#cb60-301" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: !expr params$refit</span></span>
+<span id="cb60-302"><a href="#cb60-302" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-303"><a href="#cb60-303" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-304"><a href="#cb60-304" aria-hidden="true" tabindex="-1"></a>model_step_2 <span class="ot">&lt;-</span></span>
+<span id="cb60-305"><a href="#cb60-305" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bf</span>(Effect_Size <span class="sc">|</span> <span class="fu">se</span>(Effect_Size_se, <span class="at">sigma =</span> <span class="cn">TRUE</span>) <span class="sc">~</span></span>
+<span id="cb60-306"><a href="#cb60-306" aria-hidden="true" tabindex="-1"></a>       <span class="dv">1</span> <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> Language <span class="sc">/</span> id_site))</span>
+<span id="cb60-307"><a href="#cb60-307" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-308"><a href="#cb60-308" aria-hidden="true" tabindex="-1"></a>fit_step_2 <span class="ot">&lt;-</span></span>
+<span id="cb60-309"><a href="#cb60-309" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm</span>(</span>
+<span id="cb60-310"><a href="#cb60-310" aria-hidden="true" tabindex="-1"></a>    model_step_2,</span>
+<span id="cb60-311"><a href="#cb60-311" aria-hidden="true" tabindex="-1"></a>    <span class="at">save_pars =</span> <span class="fu">save_pars</span>(<span class="at">all =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb60-312"><a href="#cb60-312" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> data_F0_multiple_final[[<span class="dv">1</span>]], </span>
+<span id="cb60-313"><a href="#cb60-313" aria-hidden="true" tabindex="-1"></a>    <span class="at">family =</span> student,</span>
+<span id="cb60-314"><a href="#cb60-314" aria-hidden="true" tabindex="-1"></a>    <span class="at">iter =</span> <span class="dv">1000</span>, </span>
+<span id="cb60-315"><a href="#cb60-315" aria-hidden="true" tabindex="-1"></a>    <span class="at">warmup =</span> <span class="dv">500</span>,</span>
+<span id="cb60-316"><a href="#cb60-316" aria-hidden="true" tabindex="-1"></a>    <span class="at">refresh =</span> <span class="dv">1000</span>,</span>
+<span id="cb60-317"><a href="#cb60-317" aria-hidden="true" tabindex="-1"></a>    <span class="at">cores =</span> <span class="dv">4</span>,</span>
+<span id="cb60-318"><a href="#cb60-318" aria-hidden="true" tabindex="-1"></a>    <span class="at">chains =</span> <span class="dv">4</span></span>
+<span id="cb60-319"><a href="#cb60-319" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb60-320"><a href="#cb60-320" aria-hidden="true" tabindex="-1"></a><span class="fu">prior_summary</span>(fit_step_2)</span>
+<span id="cb60-321"><a href="#cb60-321" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(fit_step_2, <span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_step_2.rds"</span>))</span>
+<span id="cb60-322"><a href="#cb60-322" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-323"><a href="#cb60-323" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-326"><a href="#cb60-326" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-327"><a href="#cb60-327" aria-hidden="true" tabindex="-1"></a>fit_step_2 <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_step_2.rds"</span>))</span>
+<span id="cb60-328"><a href="#cb60-328" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-329"><a href="#cb60-329" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-330"><a href="#cb60-330" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-333"><a href="#cb60-333" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-334"><a href="#cb60-334" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(fit_step_2)</span>
+<span id="cb60-335"><a href="#cb60-335" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-336"><a href="#cb60-336" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-337"><a href="#cb60-337" aria-hidden="true" tabindex="-1"></a>The nested random effects structure seems to be problematic. </span>
+<span id="cb60-338"><a href="#cb60-338" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-341"><a href="#cb60-341" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-342"><a href="#cb60-342" aria-hidden="true" tabindex="-1"></a>bayesplot<span class="sc">::</span><span class="fu">mcmc_pairs</span>(</span>
+<span id="cb60-343"><a href="#cb60-343" aria-hidden="true" tabindex="-1"></a>  fit_step_2,</span>
+<span id="cb60-344"><a href="#cb60-344" aria-hidden="true" tabindex="-1"></a>  <span class="at">np =</span> <span class="fu">nuts_params</span>(fit_step_2),</span>
+<span id="cb60-345"><a href="#cb60-345" aria-hidden="true" tabindex="-1"></a>  <span class="at">pars =</span> <span class="fu">c</span>(<span class="st">"Intercept"</span>, <span class="st">"sigma"</span>, <span class="st">"nu"</span>, <span class="st">"sd_Language__Intercept"</span>, <span class="st">"sd_Language:id_site__Intercept"</span>),</span>
+<span id="cb60-346"><a href="#cb60-346" aria-hidden="true" tabindex="-1"></a>  <span class="at">transform =</span> <span class="fu">list</span>(),</span>
+<span id="cb60-347"><a href="#cb60-347" aria-hidden="true" tabindex="-1"></a><span class="at">off_diag_args =</span> <span class="fu">list</span>(<span class="at">size =</span> <span class="fl">0.7</span>, <span class="at">alpha =</span> <span class="fl">0.1</span>))</span>
+<span id="cb60-348"><a href="#cb60-348" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-349"><a href="#cb60-349" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-350"><a href="#cb60-350" aria-hidden="true" tabindex="-1"></a><span class="fu">### Check Frequencies for Language and Site</span></span>
+<span id="cb60-351"><a href="#cb60-351" aria-hidden="true" tabindex="-1"></a><span class="fu">#### Language</span></span>
+<span id="cb60-354"><a href="#cb60-354" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-355"><a href="#cb60-355" aria-hidden="true" tabindex="-1"></a>freq_language <span class="ot">&lt;-</span> <span class="fu">table</span>(data_F0_multiple_final[[<span class="dv">1</span>]]<span class="sc">$</span>Language) <span class="sc">%&gt;%</span> <span class="fu">table</span>()</span>
+<span id="cb60-356"><a href="#cb60-356" aria-hidden="true" tabindex="-1"></a>freq_language</span>
+<span id="cb60-357"><a href="#cb60-357" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-358"><a href="#cb60-358" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-359"><a href="#cb60-359" aria-hidden="true" tabindex="-1"></a>Percentage of clusters with just 1 observation</span>
+<span id="cb60-362"><a href="#cb60-362" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-363"><a href="#cb60-363" aria-hidden="true" tabindex="-1"></a>freq_language[<span class="dv">1</span>] <span class="sc">/</span> <span class="fu">sum</span>(freq_language)</span>
+<span id="cb60-364"><a href="#cb60-364" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-365"><a href="#cb60-365" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-366"><a href="#cb60-366" aria-hidden="true" tabindex="-1"></a>Number of relevant clusters</span>
+<span id="cb60-369"><a href="#cb60-369" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-370"><a href="#cb60-370" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(freq_language[<span class="sc">-</span><span class="dv">1</span>])</span>
+<span id="cb60-371"><a href="#cb60-371" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-372"><a href="#cb60-372" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-373"><a href="#cb60-373" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-374"><a href="#cb60-374" aria-hidden="true" tabindex="-1"></a><span class="fu">#### Site</span></span>
+<span id="cb60-377"><a href="#cb60-377" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-378"><a href="#cb60-378" aria-hidden="true" tabindex="-1"></a>freq_site <span class="ot">&lt;-</span> <span class="fu">table</span>(data_F0_multiple_final[[<span class="dv">1</span>]]<span class="sc">$</span>id_site) <span class="sc">%&gt;%</span> <span class="fu">table</span>()</span>
+<span id="cb60-379"><a href="#cb60-379" aria-hidden="true" tabindex="-1"></a>freq_site</span>
+<span id="cb60-380"><a href="#cb60-380" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-381"><a href="#cb60-381" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-382"><a href="#cb60-382" aria-hidden="true" tabindex="-1"></a>Percentage of clusters with just 1 observation</span>
+<span id="cb60-385"><a href="#cb60-385" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-386"><a href="#cb60-386" aria-hidden="true" tabindex="-1"></a>freq_site[<span class="dv">1</span>] <span class="sc">/</span> <span class="fu">sum</span>(freq_site)</span>
+<span id="cb60-387"><a href="#cb60-387" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-388"><a href="#cb60-388" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-389"><a href="#cb60-389" aria-hidden="true" tabindex="-1"></a>Number of relevant clusters</span>
+<span id="cb60-392"><a href="#cb60-392" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-393"><a href="#cb60-393" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(freq_site[<span class="sc">-</span><span class="dv">1</span>])</span>
+<span id="cb60-394"><a href="#cb60-394" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-395"><a href="#cb60-395" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-396"><a href="#cb60-396" aria-hidden="true" tabindex="-1"></a><span class="fu">### Test intra-class correlation</span></span>
+<span id="cb60-399"><a href="#cb60-399" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-400"><a href="#cb60-400" aria-hidden="true" tabindex="-1"></a>model_icc_language <span class="ot">&lt;-</span>  </span>
+<span id="cb60-401"><a href="#cb60-401" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bf</span>(Effect_Size <span class="sc">|</span> <span class="fu">se</span>(Effect_Size_se, <span class="at">sigma =</span> <span class="cn">TRUE</span>) <span class="sc">~</span> <span class="dv">1</span>  <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> Language))</span>
+<span id="cb60-402"><a href="#cb60-402" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-403"><a href="#cb60-403" aria-hidden="true" tabindex="-1"></a>fit_icc_language <span class="ot">&lt;-</span> </span>
+<span id="cb60-404"><a href="#cb60-404" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm</span>(</span>
+<span id="cb60-405"><a href="#cb60-405" aria-hidden="true" tabindex="-1"></a>    model_icc_language,</span>
+<span id="cb60-406"><a href="#cb60-406" aria-hidden="true" tabindex="-1"></a>    <span class="at">save_pars =</span> <span class="fu">save_pars</span>(<span class="at">all =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb60-407"><a href="#cb60-407" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> data_F0_multiple_final[[<span class="dv">1</span>]], </span>
+<span id="cb60-408"><a href="#cb60-408" aria-hidden="true" tabindex="-1"></a>    <span class="at">family =</span> student,</span>
+<span id="cb60-409"><a href="#cb60-409" aria-hidden="true" tabindex="-1"></a>    <span class="at">iter =</span> <span class="dv">1000</span>, </span>
+<span id="cb60-410"><a href="#cb60-410" aria-hidden="true" tabindex="-1"></a>    <span class="at">warmup =</span> <span class="dv">500</span>,</span>
+<span id="cb60-411"><a href="#cb60-411" aria-hidden="true" tabindex="-1"></a>    <span class="at">refresh =</span> <span class="dv">1000</span>,</span>
+<span id="cb60-412"><a href="#cb60-412" aria-hidden="true" tabindex="-1"></a>    <span class="at">cores =</span> <span class="dv">4</span>,</span>
+<span id="cb60-413"><a href="#cb60-413" aria-hidden="true" tabindex="-1"></a>    <span class="at">chains =</span> <span class="dv">4</span></span>
+<span id="cb60-414"><a href="#cb60-414" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb60-415"><a href="#cb60-415" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(fit_icc_language, <span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_icc_language.rds"</span>))</span>
+<span id="cb60-416"><a href="#cb60-416" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-417"><a href="#cb60-417" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-418"><a href="#cb60-418" aria-hidden="true" tabindex="-1"></a>model_icc_site <span class="ot">&lt;-</span>  </span>
+<span id="cb60-419"><a href="#cb60-419" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bf</span>(Effect_Size <span class="sc">|</span> <span class="fu">se</span>(Effect_Size_se, <span class="at">sigma =</span> <span class="cn">TRUE</span>) <span class="sc">~</span> <span class="dv">1</span>  <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> id_site))</span>
+<span id="cb60-420"><a href="#cb60-420" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-421"><a href="#cb60-421" aria-hidden="true" tabindex="-1"></a>fit_icc_site <span class="ot">&lt;-</span> </span>
+<span id="cb60-422"><a href="#cb60-422" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm</span>(</span>
+<span id="cb60-423"><a href="#cb60-423" aria-hidden="true" tabindex="-1"></a>    model_icc_site,</span>
+<span id="cb60-424"><a href="#cb60-424" aria-hidden="true" tabindex="-1"></a>    <span class="at">save_pars =</span> <span class="fu">save_pars</span>(<span class="at">all =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb60-425"><a href="#cb60-425" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> data_F0_multiple_final[[<span class="dv">1</span>]], </span>
+<span id="cb60-426"><a href="#cb60-426" aria-hidden="true" tabindex="-1"></a>    <span class="at">family =</span> student,</span>
+<span id="cb60-427"><a href="#cb60-427" aria-hidden="true" tabindex="-1"></a>    <span class="at">iter =</span> <span class="dv">1000</span>, </span>
+<span id="cb60-428"><a href="#cb60-428" aria-hidden="true" tabindex="-1"></a>    <span class="at">warmup =</span> <span class="dv">500</span>,</span>
+<span id="cb60-429"><a href="#cb60-429" aria-hidden="true" tabindex="-1"></a>    <span class="at">refresh =</span> <span class="dv">1000</span>,</span>
+<span id="cb60-430"><a href="#cb60-430" aria-hidden="true" tabindex="-1"></a>    <span class="at">cores =</span> <span class="dv">4</span>,</span>
+<span id="cb60-431"><a href="#cb60-431" aria-hidden="true" tabindex="-1"></a>    <span class="at">chains =</span> <span class="dv">4</span></span>
+<span id="cb60-432"><a href="#cb60-432" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb60-433"><a href="#cb60-433" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(fit_icc_site, <span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_icc_site.rds"</span>))</span>
+<span id="cb60-434"><a href="#cb60-434" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-435"><a href="#cb60-435" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-438"><a href="#cb60-438" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-439"><a href="#cb60-439" aria-hidden="true" tabindex="-1"></a>fit_icc_language <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_icc_language.rds"</span>))</span>
+<span id="cb60-440"><a href="#cb60-440" aria-hidden="true" tabindex="-1"></a>fit_icc_site <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_icc_site.rds"</span>))</span>
+<span id="cb60-441"><a href="#cb60-441" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-442"><a href="#cb60-442" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-443"><a href="#cb60-443" aria-hidden="true" tabindex="-1"></a>Language:</span>
+<span id="cb60-446"><a href="#cb60-446" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-447"><a href="#cb60-447" aria-hidden="true" tabindex="-1"></a><span class="fu">icc</span>(fit_icc_language)</span>
+<span id="cb60-448"><a href="#cb60-448" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-449"><a href="#cb60-449" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-450"><a href="#cb60-450" aria-hidden="true" tabindex="-1"></a>Site:</span>
+<span id="cb60-453"><a href="#cb60-453" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-454"><a href="#cb60-454" aria-hidden="true" tabindex="-1"></a><span class="fu">icc</span>(fit_icc_site)</span>
+<span id="cb60-455"><a href="#cb60-455" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-456"><a href="#cb60-456" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-457"><a href="#cb60-457" aria-hidden="true" tabindex="-1"></a>We want use Site as a random intercept and drop the random intercept for Language.</span>
+<span id="cb60-458"><a href="#cb60-458" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-459"><a href="#cb60-459" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-460"><a href="#cb60-460" aria-hidden="true" tabindex="-1"></a><span class="fu">### Model: Intercept + Random Intercept for Language + Fixed Effects for Covariates</span></span>
+<span id="cb60-463"><a href="#cb60-463" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-464"><a href="#cb60-464" aria-hidden="true" tabindex="-1"></a>model_step_3 <span class="ot">&lt;-</span>  </span>
+<span id="cb60-465"><a href="#cb60-465" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bf</span>(Effect_Size <span class="sc">|</span> <span class="fu">se</span>(Effect_Size_se, <span class="at">sigma =</span> <span class="cn">TRUE</span>) <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> </span>
+<span id="cb60-466"><a href="#cb60-466" aria-hidden="true" tabindex="-1"></a>       Age_months <span class="sc">+</span> Environment <span class="sc">+</span> Task <span class="sc">+</span></span>
+<span id="cb60-467"><a href="#cb60-467" aria-hidden="true" tabindex="-1"></a>       (<span class="dv">1</span> <span class="sc">|</span> id_site))</span>
+<span id="cb60-468"><a href="#cb60-468" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-469"><a href="#cb60-469" aria-hidden="true" tabindex="-1"></a>fit_step_3 <span class="ot">&lt;-</span> </span>
+<span id="cb60-470"><a href="#cb60-470" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm</span>(</span>
+<span id="cb60-471"><a href="#cb60-471" aria-hidden="true" tabindex="-1"></a>    model_step_3,</span>
+<span id="cb60-472"><a href="#cb60-472" aria-hidden="true" tabindex="-1"></a>    <span class="at">save_pars =</span> <span class="fu">save_pars</span>(<span class="at">all =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb60-473"><a href="#cb60-473" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> data_F0_multiple_final[[<span class="dv">1</span>]], </span>
+<span id="cb60-474"><a href="#cb60-474" aria-hidden="true" tabindex="-1"></a>    <span class="at">family =</span> student,</span>
+<span id="cb60-475"><a href="#cb60-475" aria-hidden="true" tabindex="-1"></a>    <span class="at">iter =</span> <span class="dv">1000</span>, </span>
+<span id="cb60-476"><a href="#cb60-476" aria-hidden="true" tabindex="-1"></a>    <span class="at">warmup =</span> <span class="dv">500</span>,</span>
+<span id="cb60-477"><a href="#cb60-477" aria-hidden="true" tabindex="-1"></a>    <span class="at">refresh =</span> <span class="dv">1000</span>,</span>
+<span id="cb60-478"><a href="#cb60-478" aria-hidden="true" tabindex="-1"></a>    <span class="at">cores =</span> <span class="dv">4</span>,</span>
+<span id="cb60-479"><a href="#cb60-479" aria-hidden="true" tabindex="-1"></a>    <span class="at">chains =</span> <span class="dv">4</span></span>
+<span id="cb60-480"><a href="#cb60-480" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb60-481"><a href="#cb60-481" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(fit_step_3, <span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_step_3.rds"</span>))</span>
+<span id="cb60-482"><a href="#cb60-482" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-483"><a href="#cb60-483" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-486"><a href="#cb60-486" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-487"><a href="#cb60-487" aria-hidden="true" tabindex="-1"></a>fit_step_3 <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_step_3.rds"</span>))</span>
+<span id="cb60-488"><a href="#cb60-488" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(fit_step_3), <span class="at">digits =</span> <span class="dv">3</span>)</span>
+<span id="cb60-489"><a href="#cb60-489" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-490"><a href="#cb60-490" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-491"><a href="#cb60-491" aria-hidden="true" tabindex="-1"></a><span class="fu">## Fit again with multiple data sets</span></span>
+<span id="cb60-492"><a href="#cb60-492" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-495"><a href="#cb60-495" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-496"><a href="#cb60-496" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: !expr params$refit</span></span>
+<span id="cb60-497"><a href="#cb60-497" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-498"><a href="#cb60-498" aria-hidden="true" tabindex="-1"></a>fit_step_3_multiple <span class="ot">&lt;-</span> </span>
+<span id="cb60-499"><a href="#cb60-499" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm_multiple</span>(</span>
+<span id="cb60-500"><a href="#cb60-500" aria-hidden="true" tabindex="-1"></a>    model_step_3,</span>
+<span id="cb60-501"><a href="#cb60-501" aria-hidden="true" tabindex="-1"></a>    <span class="at">save_pars =</span> <span class="fu">save_pars</span>(<span class="at">all =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb60-502"><a href="#cb60-502" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> data_F0_multiple_final, </span>
+<span id="cb60-503"><a href="#cb60-503" aria-hidden="true" tabindex="-1"></a>    <span class="at">family =</span> student,</span>
+<span id="cb60-504"><a href="#cb60-504" aria-hidden="true" tabindex="-1"></a>    <span class="at">iter =</span> <span class="dv">1000</span>, </span>
+<span id="cb60-505"><a href="#cb60-505" aria-hidden="true" tabindex="-1"></a>    <span class="at">warmup =</span> <span class="dv">500</span>,</span>
+<span id="cb60-506"><a href="#cb60-506" aria-hidden="true" tabindex="-1"></a>    <span class="at">refresh =</span> <span class="dv">1000</span>,</span>
+<span id="cb60-507"><a href="#cb60-507" aria-hidden="true" tabindex="-1"></a>    <span class="at">cores =</span> <span class="dv">4</span>,</span>
+<span id="cb60-508"><a href="#cb60-508" aria-hidden="true" tabindex="-1"></a>    <span class="at">chains =</span> <span class="dv">4</span></span>
+<span id="cb60-509"><a href="#cb60-509" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb60-510"><a href="#cb60-510" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(fit_step_3_multiple, <span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_step_3_multiple.rds"</span>))</span>
+<span id="cb60-511"><a href="#cb60-511" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-512"><a href="#cb60-512" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-515"><a href="#cb60-515" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-516"><a href="#cb60-516" aria-hidden="true" tabindex="-1"></a>fit_step_3_multiple <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"output"</span>, <span class="st">"replication"</span>, <span class="st">"fit_step_3_multiple.rds"</span>))</span>
+<span id="cb60-517"><a href="#cb60-517" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-518"><a href="#cb60-518" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-521"><a href="#cb60-521" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-522"><a href="#cb60-522" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(fit_step_3_multiple), <span class="at">digits =</span> <span class="dv">3</span>)</span>
+<span id="cb60-523"><a href="#cb60-523" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-524"><a href="#cb60-524" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-527"><a href="#cb60-527" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-528"><a href="#cb60-528" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(brms<span class="sc">::</span><span class="fu">hypothesis</span>(fit_step_3_multiple, <span class="st">"Age_months &lt; 0"</span>, <span class="at">alpha =</span> .<span class="dv">025</span>), <span class="at">digits =</span> <span class="dv">3</span>)</span>
+<span id="cb60-529"><a href="#cb60-529" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-530"><a href="#cb60-530" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-531"><a href="#cb60-531" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-532"><a href="#cb60-532" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-533"><a href="#cb60-533" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-534"><a href="#cb60-534" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-535"><a href="#cb60-535" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-536"><a href="#cb60-536" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-537"><a href="#cb60-537" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-538"><a href="#cb60-538" aria-hidden="true" tabindex="-1"></a><span class="fu"># Session Info</span></span>
+<span id="cb60-539"><a href="#cb60-539" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-542"><a href="#cb60-542" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb60-543"><a href="#cb60-543" aria-hidden="true" tabindex="-1"></a>pander<span class="sc">::</span><span class="fu">pander</span>(<span class="fu">sessionInfo</span>())</span>
+<span id="cb60-544"><a href="#cb60-544" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb60-545"><a href="#cb60-545" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-546"><a href="#cb60-546" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-547"><a href="#cb60-547" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-548"><a href="#cb60-548" aria-hidden="true" tabindex="-1"></a></span>
 </code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div></div></div></div></div>
 </div> <!-- /content -->

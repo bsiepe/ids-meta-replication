@@ -1,3 +1,5 @@
+output/replication
+
 # History files
 .Rhistory
 .Rapp.history
