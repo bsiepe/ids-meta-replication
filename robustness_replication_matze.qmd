@@ -25,7 +25,7 @@ format:
     fig-width: 7
     fig-height: 4.5
     fig-align: "center"
-    embed-ressources: true
+    embed-resources: true
 execute:
   message: false
   warning: false
@@ -429,7 +429,7 @@ fit_step_3 <- readRDS(here("output", "replication", "fit_step_3.rds"))
 print(summary(fit_step_3), digits = 3)
 ```
 
-## Fit again with multiple data sets
+### Fit again with multiple data sets
 
 ```{r}
 #| eval: !expr params$refit
@@ -459,6 +459,142 @@ print(summary(fit_step_3_multiple), digits = 3)
 
 ```{r}
 print(brms::hypothesis(fit_step_3_multiple, "Age_months < 0", alpha = .025), digits = 3)
+```
+
+## VSA
+The authors selected the model with age & language as predictors as the best model.
+
+```{r vsa-sampler}
+data_VSA_multiple_final <- readRDS(here("data/data_VSA_multiple_final.RData"))
+
+baseline_f <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + 
+                   Language + Age_months + (1 | Language/id_site/measurement_num))
+
+VSA_age_language_m_sampler <- 
+  brm_multiple(
+    baseline_f,
+    save_pars = save_pars(all = TRUE),
+    data = data_VSA_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "replication", "sampler_check", "VSA_age_language_m_rep_sampler"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.80,
+      max_treedepth = 10 ))
+summary(VSA_age_language_m_sampler)
+pp_check(VSA_age_language_m_sampler, ndraws = 100)
+```
+
+
+## AR
+The authors selected the model with task, age & language as predictors as the best model.
+
+```{r ar-sampler}
+data_AR_multiple_final <- readRDS(here("data/data_AR_multiple_final.RData"))
+baseline_t <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Age_months + 
+                   Language + Task + (1 | Language/id_site/measurement_num))
+
+AR_task_language_age_m_sampler <- 
+  brm(
+    baseline_t,
+    save_pars = save_pars(all = TRUE),
+    data = data_AR_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "replication", "sampler_check", "AR_task_language_age_m_rep_sampler"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.80,
+      max_treedepth = 10 ))
+
+summary(AR_task_language_age_m_sampler)
+pp_check(AR_task_language_age_m_sampler, ndraws = 100)
+
+```
+
+## VD
+The authors selected the model with age & language as predictors as the best model.
+
+```{r vd-sampler}
+data_VD_multiple_final <- readRDS(here("data/data_VD_multiple_final.RData"))
+baseline_f <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + 
+                   Language + Age_months + (1 | Language/id_site/measurement_num))
+
+VD_age_language_m_sampler <- 
+  brm_multiple(
+    baseline_f,
+    save_pars = save_pars(all = TRUE),
+    data = data_VD_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "replication", "sampler_check", "VD_age_language_m_rep_sampler"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = cores,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.80,
+      max_treedepth = 10 ))
+
+summary(VD_age_language_m_sampler)
+pp_check(VD_age_language_m_sampler, ndraws = 100)
+
+```
+
+
+
+## F0V
+The authors selected the model with task, age & language as predictors as the best model.
+
+```{r f0v-sampler}
+data_F0V_multiple_final <- readRDS(here("data/data_F0V_multiple_final.RData"))
+baseline_t <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Age_months + 
+                   Language + Task + (1 | Language/id_site/measurement_num))
+priors1 <- c(brms::prior(normal(0, 2.5), class = Intercept),
+             brms::prior(normal(1, 1), class = sd),
+             brms::prior(normal(0, 1), class = b),
+             brms::prior(normal(0, 0.05), class = b, coef = "Age_months"),
+             brms::prior(gamma(2, 0.1), class = nu))
+
+F0V_task_language_age_m_sampler <- 
+  brm_multiple(
+    baseline_t,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0V_multiple_final, 
+    family = student,
+    prior = priors1,
+    file = here("models", "replication", "sampler_check", "F0V_task_language_age_m_rep_sampler_new"),
+    sample_prior = T,
+    iter = 5000, 
+    warmup = 500,
+    cores = 2,
+    recompile = TRUE,
+    chains = 2,
+    #backend = "cmdstanr",
+    #threads = threading(2),
+    control = list(
+      adapt_delta = 0.80,
+      max_treedepth = 10 ))
+
+summary(F0V_task_language_age_m_sampler)
+pp_check(F0V_task_language_age_m_sampler, ndraws = 100)
+
 ```
 
 
