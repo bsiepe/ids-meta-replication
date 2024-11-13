@@ -52,22 +52,23 @@ library(knitr)
 set.seed(35032)
 ``` 
 
-
-# Sampler Settings
-The authors used relatively unorthodox sampler settings by choosing an `adapt_delta` of 0.99 and a `max_treedepth` of 20. We will compare fitting the models selected as best by the authors to the same models with more standard sampler settings, as this might give us an insight into potential issues with model complexity.
-
-## F0
-The authors selected the model with language, age, task & environment as predictors as the best model. 
-
-
-We fit the model with typical settings on the first dataset to diagnose what is going wrong
-
+Load the data.
 ```{r}
 data_F0_multiple_final <- readRDS(here("data","data_F0_multiple_final.RData"))
 ```
 
+# Sampler Settings
+The authors used relatively unorthodox sampler settings by choosing an `adapt_delta` of 0.99 and a `max_treedepth` of 20. We will compare fitting the models selected as best by the authors to the same models with more standard sampler settings, as this might give us an insight into potential issues with model complexity. Also 500 warmup samples and 500 inference samples per chain (2,000 overall) should be sufficient for a well-behaved model.
 
-```{r f0-sampler}
+# F0
+
+The authors selected the model with language, age, task & environment as predictors as the best model. 
+
+We fit the model with typical settings on the first dataset to diagnose what is going wrong
+
+
+## Original Model with Typical Sampler Settings
+```{r}
 #| eval: !expr params$refit
 
 
@@ -101,27 +102,31 @@ F0_task_environment_language_age_m_sampler <-
   readRDS(here("output", "replication", "F0_task_environment_language_age_m_sampler.rds"))
 ```
 
-
 ```{r}
 summary(F0_task_environment_language_age_m_sampler)
 ```
 
-- Error variance is zero! We incorporate the residual in the model.
+Two things might cause issues here:
+- the `sd(Intercept)` for `Language:id_site has` a higher rhat and lower ESS than the other parameters
+- The error variance is zero! We incorporate the residual in the model. At the same time, there is a random intercept for `~Language:id_site:measurement_num`
 
-### Re-fit with residual variance
+Let's check the numbers of repeated measurements for each cluster of `~Language:id_site:measurement_num`
+
+```{r}
+table(data_F0_multiple_final[[1]]$measurement_num) %>% table()
+```
+
+All clusters have only one observation. We will drop the random intercept for `~Language:id_site:measurement_num` and re-fit the model and instead incorporate the residual variance.
+
+
+## Re-fit with residual variance
 ```{r }
 #| eval: !expr params$refit
 
 model_sigma_true <-  
   bf(Effect_Size | se(Effect_Size_se, sigma = TRUE) ~ 
        1 + Age_months + Language + Environment + Task + 
-       (1 | Language/id_site/measurement_num))
-
-priors1 <- c(brms::prior(normal(0, 2.5), class = Intercept),
-             brms::prior(normal(1, 1), class = sd),
-             brms::prior(normal(0, 1), class = b),
-             brms::prior(normal(0, 0.05), class = b, coef = "Age_months"),
-             brms::prior(gamma(2, 0.1), class = nu))
+       (1 | Language/id_site))
 
 fit_sigma_true <- 
   brm(
@@ -148,8 +153,11 @@ fit_sigma_true <- readRDS(here("output", "replication", "fit_sigma_true.rds"))
 summary(fit_sigma_true)
 ```
 
-Let's make the priors a little less informative
+Rhats and ESS look better now but still there are some divergences.
+Let's make the priors a little less informative and see if something breaks or the issues become more obvious. By ommiting the 'prior' argument we can use the implemented default priors.
 
+
+## Re-fit with less informative priors
 ```{r }
 #| eval: !expr params$refit
 
@@ -157,7 +165,7 @@ Let's make the priors a little less informative
 model_uninformative <-  
   bf(Effect_Size | se(Effect_Size_se, sigma = TRUE) ~ 
        1 + Age_months + Language + Environment + Task + 
-       (1 | Language/id_site/measurement_num))
+       (1 | Language/id_site))
 
 fit_uninformative <-
   brm(
@@ -179,17 +187,22 @@ saveRDS(fit_uninformative, here("output", "replication", "fit_uninformative.rds"
 fit_uninformative <- readRDS(here("output", "replication", "fit_uninformative.rds"))
 ```
 
+
+Let's check the default priors.
+
 ```{r}
-prior_summary(fit_uninformative)
+prior_summary(fit_uninformative) %>% as.data.frame() %>% kable()
 ```
 
 ```{r}
 summary(fit_uninformative)
 ```
 
-The model seems to be robust to the priors.
+The model seems not to be robust to the less informative priors. The intercept and the random intercept for Language seem to be especially problematic.
+
 Let us build the model from simple to complex to see where the divergences occur 
-first.
+first and parameter estimates break.
+
 
 ### Intercept-only Model
 ```{r}
@@ -226,7 +239,7 @@ summary(fit_step_0)
 Everything seems to be fine here. Let's add the random intercept for language.
 
 
-### Model: Intercept + Random Intercept for Language
+## Model: Intercept + Random Intercept for Language
 ```{r}
 #| eval: !expr params$refit
 
@@ -254,17 +267,13 @@ fit_step_1 <- readRDS(here("output", "replication", "fit_step_1.rds"))
 ```
 
 ```{r}
-prior_summary(fit_step_1)
-```
-
-
-```{r}
 summary(fit_step_1)
 ```
 
 Everything seems to be fine here. Let's add the random intercept for site.
 
-### Model: Intercept + Random Intercept for Language + Random Intercept for Site
+
+## Model: Intercept + Random Intercept for Language + Random Intercept for Site
 ```{r}
 #| eval: !expr params$refit
 
@@ -285,7 +294,6 @@ fit_step_2 <-
     cores = 4,
     chains = 4
     )
-prior_summary(fit_step_2)
 saveRDS(fit_step_2, here("output", "replication", "fit_step_2.rds"))
 ```
 
@@ -293,55 +301,54 @@ saveRDS(fit_step_2, here("output", "replication", "fit_step_2.rds"))
 fit_step_2 <- readRDS(here("output", "replication", "fit_step_2.rds"))
 ```
 
-
 ```{r}
 summary(fit_step_2)
 ```
 
-The nested random effects structure seems to be problematic. 
+The nested random effects structure seems to be problematic as it leads to divergences. 
+Let's check the frequencies of the clusters for Language and Site.
 
-```{r}
-bayesplot::mcmc_pairs(
-  fit_step_2,
-  np = nuts_params(fit_step_2),
-  pars = c("Intercept", "sigma", "nu", "sd_Language__Intercept", "sd_Language:id_site__Intercept"),
-  transform = list(),
-off_diag_args = list(size = 0.7, alpha = 0.1))
-```
 
 ### Check Frequencies for Language and Site
 #### Language
+Frequencies:
 ```{r}
 freq_language <- table(data_F0_multiple_final[[1]]$Language) %>% table()
 freq_language
 ```
 
-Percentage of clusters with just 1 observation
+Percentage of clusters with just 1 observation:
 ```{r}
-freq_language[1] / sum(freq_language)
+paste0(round((freq_language[1] / sum(freq_language))*100, 1), "%")
 ```
 
-Number of relevant clusters
+Number of clusters with more than 1 observation:
 ```{r}
 sum(freq_language[-1])
 ```
 
 
 #### Site
+Frequencies:
 ```{r}
 freq_site <- table(data_F0_multiple_final[[1]]$id_site) %>% table()
 freq_site
 ```
 
-Percentage of clusters with just 1 observation
+Percentage of clusters with just 1 observation:
 ```{r}
-freq_site[1] / sum(freq_site)
+paste0(round((freq_site[1] / sum(freq_site))*100, 1), "%")
 ```
 
-Number of relevant clusters
+Number of clusters with more than 1 observation:
 ```{r}
 sum(freq_site[-1])
 ```
+
+We have a high number of clusters with only one observation for both Language and Site. 
+A model featuring random intercepts for both Language and Site is probably not identifiable.
+
+Let's check the intra-class correlation for Language and Site to decide which random intercept to keep.
 
 ### Test intra-class correlation
 ```{r}
@@ -399,14 +406,17 @@ Site:
 icc(fit_icc_site)
 ```
 
-We want use Site as a random intercept and drop the random intercept for Language.
+We will use Site as a random intercept and drop the random intercept for Language.
+Let's add the fixed effects back in. We will first add the fixed effects for Age, Environment, and Task and leave Language out for now. Since Language has a high number of levels, we will add it last to see if it causes any issues.
 
 
-### Model: Intercept + Random Intercept for Language + Fixed Effects for Covariates
+## Model: Intercept + Random Intercept for Language + Fixed Effects for Covariates
 ```{r}
+#| eval: !expr params$refit
+
 model_step_3 <-  
   bf(Effect_Size | se(Effect_Size_se, sigma = TRUE) ~ 1 + 
-       Age_months + Environment + Task +
+        Age_months + Environment + Task +
        (1 | id_site))
 
 fit_step_3 <- 
@@ -421,24 +431,32 @@ fit_step_3 <-
     cores = 4,
     chains = 4
     )
+
 saveRDS(fit_step_3, here("output", "replication", "fit_step_3.rds"))
 ```
 
 ```{r}
 fit_step_3 <- readRDS(here("output", "replication", "fit_step_3.rds"))
-print(summary(fit_step_3), digits = 3)
+print(summary(fit_step_3), digits = 2)
 ```
 
-### Fit again with multiple data sets
+The model looks fine. Let's add Language as a fixed effect. Since we do not have random intercepts for Language, this step seems more appropriate then in the original model.
 
+
+## Model: Intercept + Random Intercept for Language + Fixed Effects for Age, Environment, Task, and Language
 ```{r}
 #| eval: !expr params$refit
 
-fit_step_3_multiple <- 
-  brm_multiple(
-    model_step_3,
+model_step_4 <-  
+  bf(Effect_Size | se(Effect_Size_se, sigma = TRUE) ~ 1 + 
+        Age_months + Environment + Task + Language +
+       (1 | id_site))
+
+fit_step_4 <- 
+  brm(
+    model_step_4,
     save_pars = save_pars(all = TRUE),
-    data = data_F0_multiple_final, 
+    data = data_F0_multiple_final[[1]], 
     family = student,
     iter = 1000, 
     warmup = 500,
@@ -446,158 +464,85 @@ fit_step_3_multiple <-
     cores = 4,
     chains = 4
     )
-saveRDS(fit_step_3_multiple, here("output", "replication", "fit_step_3_multiple.rds"))
+
+saveRDS(fit_step_4, here("output", "replication", "fit_step_4.rds"))
 ```
 
 ```{r}
-fit_step_3_multiple <- readRDS(here("output", "replication", "fit_step_3_multiple.rds"))
+fit_step_4 <- readRDS(here("output", "replication", "fit_step_4.rds"))
+print(summary(fit_step_4), digits = 2)
+```
+
+There are a lot of null effects for Language. Let's do a model comparison with the previous model, which did not include Language as a fixed effect.
+
+
+## Model Comparison: Inclusion of Language as a Fixed Effect
+```{r}
+rbind(
+No_Language = performance::model_performance(fit_step_3) %>% as.data.frame(),
+Language = performance::model_performance(fit_step_4) %>% as.data.frame()
+) %>% kable(digits = 3)
+```
+```{r}
+rbind(
+No_Language = performance::r2_bayes(fit_step_3) %>% as.data.frame(),
+Language = performance::r2_bayes(fit_step_4) %>% as.data.frame()
+) %>% kable(digits = 3)
+```
+Log-Bayes-Factor:
+```{r}
+brms::bayes_factor(fit_step_4,fit_step_3, log = TRUE)
+```
+
+The model containing Language is the better model.
+
+
+Now that we have a working model, we can fit it to all datasets. We will double the sample for even better estimates.
+
+### Fit again with multiple data sets
+
+```{r eval=FALSE}
+#| eval: !expr params$refit
+
+fit_step_4_multiple <- 
+  brm_multiple(
+    model_step_4,
+    save_pars = save_pars(all = TRUE),
+    data = data_F0_multiple_final, 
+    family = student,
+    iter = 2000, 
+    warmup = 1000,
+    refresh = 1000,
+    cores = 4,
+    chains = 4
+    )
+
+saveRDS(fit_step_4_multiple, here("output", "replication", "fit_step_4_multiple.rds"))
 ```
 
 ```{r}
-print(summary(fit_step_3_multiple), digits = 3)
+fit_step_4_multiple <- readRDS(here("output", "replication", "fit_step_4_multiple.rds"))
 ```
 
 ```{r}
-print(brms::hypothesis(fit_step_3_multiple, "Age_months < 0", alpha = .025), digits = 3)
+print(summary(fit_step_4_multiple), digits = 3)
 ```
 
-## VSA
-The authors selected the model with age & language as predictors as the best model.
-
-```{r vsa-sampler}
-data_VSA_multiple_final <- readRDS(here("data/data_VSA_multiple_final.RData"))
-
-baseline_f <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + 
-                   Language + Age_months + (1 | Language/id_site/measurement_num))
-
-VSA_age_language_m_sampler <- 
-  brm_multiple(
-    baseline_f,
-    save_pars = save_pars(all = TRUE),
-    data = data_VSA_multiple_final, 
-    family = student,
-    prior = priors1,
-    file = here("models", "replication", "sampler_check", "VSA_age_language_m_rep_sampler"),
-    sample_prior = T,
-    iter = 5000, 
-    warmup = 500,
-    cores = cores,
-    chains = 2,
-    #backend = "cmdstanr",
-    #threads = threading(2),
-    control = list(
-      adapt_delta = 0.80,
-      max_treedepth = 10 ))
-summary(VSA_age_language_m_sampler)
-pp_check(VSA_age_language_m_sampler, ndraws = 100)
+```{r}
+h <- c("Age_months < 0", "Environmentnaturalistic < 0", "Taskspontaneousspeech > 0")
+hyp <- brms::hypothesis(
+  fit_step_4_multiple,
+  hypothesis = h,
+  alpha = .025
+)
+plot(hyp)
 ```
 
-
-## AR
-The authors selected the model with task, age & language as predictors as the best model.
-
-```{r ar-sampler}
-data_AR_multiple_final <- readRDS(here("data/data_AR_multiple_final.RData"))
-baseline_t <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Age_months + 
-                   Language + Task + (1 | Language/id_site/measurement_num))
-
-AR_task_language_age_m_sampler <- 
-  brm(
-    baseline_t,
-    save_pars = save_pars(all = TRUE),
-    data = data_AR_multiple_final, 
-    family = student,
-    prior = priors1,
-    file = here("models", "replication", "sampler_check", "AR_task_language_age_m_rep_sampler"),
-    sample_prior = T,
-    iter = 5000, 
-    warmup = 500,
-    cores = cores,
-    chains = 2,
-    #backend = "cmdstanr",
-    #threads = threading(2),
-    control = list(
-      adapt_delta = 0.80,
-      max_treedepth = 10 ))
-
-summary(AR_task_language_age_m_sampler)
-pp_check(AR_task_language_age_m_sampler, ndraws = 100)
-
+```{r}
+hyp[[1]] %>% select(-"CI.Lower") %>% kable(digits = 3)
 ```
 
-## VD
-The authors selected the model with age & language as predictors as the best model.
-
-```{r vd-sampler}
-data_VD_multiple_final <- readRDS(here("data/data_VD_multiple_final.RData"))
-baseline_f <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + 
-                   Language + Age_months + (1 | Language/id_site/measurement_num))
-
-VD_age_language_m_sampler <- 
-  brm_multiple(
-    baseline_f,
-    save_pars = save_pars(all = TRUE),
-    data = data_VD_multiple_final, 
-    family = student,
-    prior = priors1,
-    file = here("models", "replication", "sampler_check", "VD_age_language_m_rep_sampler"),
-    sample_prior = T,
-    iter = 5000, 
-    warmup = 500,
-    cores = cores,
-    chains = 2,
-    #backend = "cmdstanr",
-    #threads = threading(2),
-    control = list(
-      adapt_delta = 0.80,
-      max_treedepth = 10 ))
-
-summary(VD_age_language_m_sampler)
-pp_check(VD_age_language_m_sampler, ndraws = 100)
-
-```
-
-
-
-## F0V
-The authors selected the model with task, age & language as predictors as the best model.
-
-```{r f0v-sampler}
-data_F0V_multiple_final <- readRDS(here("data/data_F0V_multiple_final.RData"))
-baseline_t <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Age_months + 
-                   Language + Task + (1 | Language/id_site/measurement_num))
-priors1 <- c(brms::prior(normal(0, 2.5), class = Intercept),
-             brms::prior(normal(1, 1), class = sd),
-             brms::prior(normal(0, 1), class = b),
-             brms::prior(normal(0, 0.05), class = b, coef = "Age_months"),
-             brms::prior(gamma(2, 0.1), class = nu))
-
-F0V_task_language_age_m_sampler <- 
-  brm_multiple(
-    baseline_t,
-    save_pars = save_pars(all = TRUE),
-    data = data_F0V_multiple_final, 
-    family = student,
-    prior = priors1,
-    file = here("models", "replication", "sampler_check", "F0V_task_language_age_m_rep_sampler_new"),
-    sample_prior = T,
-    iter = 5000, 
-    warmup = 500,
-    cores = 2,
-    recompile = TRUE,
-    chains = 2,
-    #backend = "cmdstanr",
-    #threads = threading(2),
-    control = list(
-      adapt_delta = 0.80,
-      max_treedepth = 10 ))
-
-summary(F0V_task_language_age_m_sampler)
-pp_check(F0V_task_language_age_m_sampler, ndraws = 100)
-
-```
-
-
+### Compare to original model
 
 
 
