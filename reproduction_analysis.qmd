@@ -101,7 +101,7 @@ if (Sys.info()['sysname'] == "Linux") {
 }
 
 #The following code downloads the data and robustness checks data:
-#BS: Wrong index as well
+#BS: Wrong index here
 project_data_list <- osf_ls_files(project_models_list[7,])
 osf_download(project_data_list, path = "data")
 
@@ -4093,7 +4093,7 @@ post_preds <- hypothesis(VSA_environment_report, "((Intercept*30 + LanguageBisla
 
 post_preds
 
-# BS: THEY FORGOT ID SITE HERE
+# BS: Had to add id_site here to run the model
 data_AR_final_report <- data_AR_final %>%
   select(Study, Language, Task, Environment, Age_months, Effect_Size, Effect_Size_se, measurement_num, id_site) %>%
   drop_na() %>%
@@ -4249,7 +4249,6 @@ df_diff_point |>
                 ~round(., 4))) |> 
   knitr::kable()
 ```
-
 
 
 In addition, we can compare the random effects. Instead of looking at every individual random effect, we focus on the standard deviations of the random effects.
