@@ -97,6 +97,7 @@ compare_point_ests <- function(original_folder,
 estimate_robma <- function(prefix,
                            dataset_id = 1,
                            parallel = TRUE,
+                           direction = "positive",
                            ...) {
   # read in data
   df_data <- readRDS(here(paste0(
@@ -106,8 +107,10 @@ estimate_robma <- function(prefix,
   est_pub_bias <- RoBMA::RoBMA(
     y = df_data[[dataset_id]]$Effect_Size,
     se = df_data[[dataset_id]]$Effect_Size_se,
+    study_names = df_data[[dataset_id]]$id_site,
     study_ids = df_data[[dataset_id]]$id_site,
     parallel = parallel,
+    effect_direction = direction, 
     seed = 35037,
     ...
   )
