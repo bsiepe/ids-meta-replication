@@ -440,7 +440,7 @@ fit_step_3 <- readRDS(here("output", "replication", "fit_step_3.rds"))
 print(summary(fit_step_3), digits = 2)
 ```
 
-The model looks fine. Let's add Language as a fixed effect. Since we do not have random intercepts for Language, this step seems more appropriate then in the original model.
+The model looks fine. Let's add Language as a fixed effect. Since we do not have random intercepts for Language, this step seems more appropriate than the approach in the original model.
 
 
 # Model: Intercept + Random Intercept for Language + Fixed Effects for Age, Environment, Task, and Language
@@ -495,7 +495,6 @@ brms::bayes_factor(fit_step_4,fit_step_3, log = TRUE)
 ```
 
 The model containing Language is the better model.
-
 
 Now that we have a working model, we can fit it to all datasets. We will double the sample for even better estimates.
 
@@ -615,8 +614,7 @@ rbind(Original = hyp2[[1]], Stripped = hyp[[1]]) %>%
   kable(digits = 3)
 ```
 
-The original results hold up in our robustness analysis, although the evidence for the effects is a little bit weeker than in the original model.
-
+The original results hold up in our robustness analysis, although the evidence for the effects is a little bit weaker than in the original model.
 
 
 # Session Info
