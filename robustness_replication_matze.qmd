@@ -585,6 +585,14 @@ F0_task_environment_language_age_m_sampler_multiple <-
 
 
 # Compare the Original Model to Our Stripped Down Model
+```{r}
+h2 <- c("Age_months < 0", "Environmentnaturalistic < 0", "Taskspontaneousspeech > 0")
+hyp2 <- brms::hypothesis(
+  F0_task_environment_language_age_m_sampler_multiple,
+  hypothesis = h2,
+  alpha = .025
+)
+```
 
 ```{r}
 rbind(Original = hyp2[[1]], Stripped = hyp[[1]]) %>%
@@ -594,7 +602,7 @@ rbind(Original = hyp2[[1]], Stripped = hyp[[1]]) %>%
   kable(digits = 3)
 ```
 
-The original results hold up in our robustness analysis, although the evidence for the effects is a little bit weeker than in the original model
+The original results hold up in our robustness analysis, although the evidence for the effects is a little bit weeker than in the original model.
 
 
 
