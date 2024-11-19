@@ -1,6 +1,6 @@
 ---
 title: "Robustness replication of *A Bayesian Meta-Analysis of the Acoustic Properties of Infant-Directed Speech*"
-subtitle: "Reanalysis of F0"
+subtitle: "Sampler Settings: Reanalysis of F0"
 author: 
  - name: Björn S. Siepe
    orcid: 0000-0002-9558-4648
@@ -32,7 +32,7 @@ execute:
   warning: false
   eval: true
 params: 
-  refit: false
+  refit: true
 ---
 
 # Preparation
