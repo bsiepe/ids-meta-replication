@@ -32,11 +32,12 @@ execute:
   warning: false
   eval: true
 params: 
-  refit: true
+  refit: false
 ---
 
 # Preparation
-Load the necessary packages and set the seed for reproducibility.
+In this document, we perform the case study concerning sampler settings for the $f_0$ parameter.
+We first load the necessary packages and set the seed for reproducibility.
 ```{r setup}
 library(brms)
 library(tidyverse)

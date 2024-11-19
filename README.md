@@ -12,22 +12,14 @@ This robustness replication is part of the Institute4Replication (I4R) effort to
 - `functions.R` contains auxiliary functions used for reproducibility analyses.
 
 ### `/data/`
-Contains all raw data used. 
+Contains all raw data used. As we simply load all data from the original repository, we did not reupload those files here. 
 
 ### `/models` 
-Contains all original models, and our replications. TODO check if this is too large.
+Contains all original models, and our replications. As these files are too large for GitHub, we uploaded them to associated project on the [Open Science Framework](https://osf.io/ukfrc/) and provide a script to download them from the OSF. 
+Alternatively, you can re-run our quarto files to obtain all models. 
 
 
-## Citation
+## Authors
+Björn S. Siepe, Matthias Kloft, Semih Can Aktepe, Björn S. Siepe
 
-Please cite as TODO
-
-## Reproduce
-TODO update docker and makefile for final versions
-
-If you have installed Docker and Make, you can use the following files to reproduce the main results within a Docker container:
-
-Run `make docker` from the root directory of this git repository. This will install all necessary
-dependencies using the `Dockerfile` and `Makefile`. RStudio Server can then be opened from a browser
-(<http://localhost:8787>), and `original_analysis.qmd` and `robustness_replication.qmd` can then be rerun.
 

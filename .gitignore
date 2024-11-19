@@ -56,5 +56,6 @@ data/
 # all models
 models/
 
-
-
+# not yet working Docker & Make
+Dockerfile
+Makefile
