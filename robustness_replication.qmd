@@ -1,5 +1,6 @@
 ---
 title: "Robustness replication of *A Bayesian Meta-Analysis of the Acoustic Properties of Infant-Directed Speech*"
+subtitle: "Publication Bias, Model Weights, and Sampler Settings"
 author: 
  - name: Björn S. Siepe
    orcid: 0000-0002-9558-4648
@@ -34,7 +35,7 @@ execute:
 
 # Preparation
 Load the necessary packages and set the seed for reproducibility.
-```{r setup}
+```{r setup, eval = TRUE}
 library(brms)
 library(tidyverse)
 library(here)
@@ -47,92 +48,31 @@ library(pander)
 library(knitr)
 library(xtable)
 set.seed(35032)
+source("functions.R")
 ``` 
 
 # Publication Bias 
-Here, we will use Robust Bayesian Meta-Analyses to fit an ensemble of meta-analytic models, which will then be averaged with Bayesian Model Averaging. These models also estimate a publication bias adjustment.
+Here, we intended to  use Robust Bayesian Meta-Analyses to fit an ensemble of meta-analytic models, which would then be averaged with Bayesian Model Averaging. These models also include a publication bias adjustment.
 https://fbartos.github.io/RoBMA/reference/RoBMA.reg.html
-## F0
 
 
-TODO how to deal with hedges g
-https://forum.cogsci.nl/discussion/7239/robma-random-effects-meta-analysis-with-meta-regression
-
-
-We use an auxiliary function to estimate all model-averaged models:
+We used an auxiliary function to estimate all model-averaged models. However, these analyses did not converge, so we just include the code for transparency.
 ```{r}
 prefixes <- c("F0", "VSA", "AR", "F0V", "VD")
 robma_fits <- list()
 
 for(prefix in prefixes){
   message(paste("Computing RoBMA for prefix:", prefix))
-  robma_fits[[prefix]] <- estimate_robma(prefix)
+  # account for negative expected effect for AR
+  if(prefix != "AR"){
+    robma_fits[[prefix]] <- estimate_robma(prefix,
+                                         direction = "positive")
+  } else {
+        robma_fits[[prefix]] <- estimate_robma(prefix,
+                                         direction = "negative")
+  }
+
 }
-
-```
-
-
-
-### Intercept-Only
-```{r f0-intercept-robma}
-data_F0 <- readRDS(here("data/data_F0_multiple_final.RData"))
-
-# TODO hedges g instead of d
-# TODO Why is this a multivariate model? 
-# TODO what about MICE?
-F0_pub_bias <- RoBMA(
-      y = data_F0[[1]]$Effect_Size, 
-      se = data_F0[[1]]$Effect_Size_se, 
-      study_ids = data_F0[[1]]$id_site,
-      priors_bias = NULL,
-      parallel = TRUE, 
-      seed = 35037)
-
-saveRDS(F0_pub_bias, file = here("output/replication/F0_pub_bias.RDS"))
-
-```
-
-Analyze the results:
-```{r f0-intercept-robma-summary}
-F0_pub_bias <- readRDS(here("output/replication/F0_pub_bias.RDS"))
-
-# summary(F0_pub_bias)
-
-# Obtain neat summary: 
-interpret(F0_pub_bias)
-```
-
-
-
-## VSA
-The authors selected the model with age & language as predictors as the best model.
-
-```{r vsa-robma}
-
-```
-
-
-
-## AR
-The authors selected the model with task, age & language as predictors as the best model.
-
-```{r ar-robma}
-
-```
-
-## VD
-The authors selected the model with age & language as predictors as the best model.
-
-```{r vd-robma}
-
-```
-
-
-
-## F0V
-The authors selected the model with task, age & language as predictors as the best model.
-
-```{r f0v-robma}
 
 ```
 
@@ -514,8 +454,8 @@ Reload all results
 weights <- readRDS(here("output/replication/weights_list.RDS"))
 ```
 
-Then create a comparison table for model rank:
-```{r, eval = TRUE}
+Then create a comparison table for model rank for the paper:
+```{r, eval = FALSE}
 df_weights <- lapply(weights, function(x){
   bind_rows(x, .id = "weights")
 }) |> 
@@ -549,7 +489,8 @@ df_weights |>
 
 
 # Sampler Settings
-The authors used relatively unorthodox sampler settings by choosing an `adapt_delta` of 0.99 and a `max_treedepth` of 20. We will compare fitting the models selected as best by the authors to the same models with more standard sampler settings, as this might give us an insight into potential issues with model complexity.
+The authors used relatively unorthodox sampler settings by choosing an `adapt_delta` of 0.99 and a `max_treedepth` of 20. We will compare fitting the models selected as best by the authors to the same models with more standard sampler settings, as this might give us an insight into potential issues with model complexity. 
+We provide a deeper example investigation of convergence issues for FO in another supplementary file. 
 
 ## F0
 The authors selected the model with language, age, task & environment as predictors as the best model. 
@@ -590,40 +531,22 @@ F0_task_environment_language_age_m_sampler <-
 ```
 
 
-Reload the re-estimated model and the original model.
-```{r}
-F0_task_environment_language_age_m <- readRDS("models/F0_task_environment_language_age_m.rds")
-F0_task_environment_language_age_m_sampler <- readRDS("models/replication/sampler_check/F0_task_environment_language_age_m_rep_sampler.rds")
-```
-
 
 ### Compare Point Estimates
 We now compare the point estimates of the re-estimated model with those of the original model:
-```{r}
-fit_compare <- compare_point_ests(F0_task_environment_language_age_m,
+```{r, eval = TRUE}
+F0_task_environment_language_age_m <- readRDS("models/F0_task_environment_language_age_m.rds")
+F0_task_environment_language_age_m_sampler <- readRDS("models/replication/sampler_check/F0_task_environment_language_age_m_rep_sampler.rds")
+
+fit_compare <- diff_point_est(F0_task_environment_language_age_m,
                    F0_task_environment_language_age_m_sampler)
+
+fit_compare |> 
+  mutate(across(contains("Diff"),
+                ~round(.x, 3))) |> 
+  knitr::kable()
 ```
 
-
-
-### Convergence Checks
-Now we check convergence: 
-```{r}
-lp_F0 <- bayesplot::log_posterior(F0_task_environment_language_age_m_sampler)
-np_F0 <- bayesplot::nuts_params(F0_task_environment_language_age_m_sampler)
-bayesplot::mcmc_nuts_divergence(np_F0, lp_F0)
-```
-
-```{r}
-bayesplot::mcmc_pairs(F0_task_environment_language_age_m_sampler, np = np_F0, pars = c("Intercept","b_Age_months","nu"),
-           off_diag_args = list(size = 0.75))
-```
-
-```{r}
-bayesplot::mcmc_parcoord(F0_task_environment_language_age_m_sampler, np = np_F0, pars = c("Intercept","b_Age_months","b_LanguageBritishEnglish"))
-```
-
-### Model Simplification
 
 ## VSA
 The authors selected the model with age & language as predictors as the best model.
@@ -654,6 +577,23 @@ VSA_age_language_m_sampler <-
       max_treedepth = 10 ))
 summary(VSA_age_language_m_sampler)
 pp_check(VSA_age_language_m_sampler, ndraws = 100)
+```
+
+
+
+### Compare Point Estimates
+We now compare the point estimates of the re-estimated model with those of the original model (or rather, our replication of it):
+```{r, eval = TRUE}
+VSA_age_language_m <- readRDS("models/replication/VSA_age_language_m_rep.rds")
+VSA_age_language_m_sampler <- readRDS("models/replication/sampler_check/VSA_age_language_m_rep_sampler.rds")
+
+fit_compare <- diff_point_est(VSA_age_language_m ,
+                   VSA_age_language_m_sampler)
+
+fit_compare |> 
+  mutate(across(contains("Diff"),
+                ~round(.x, 3))) |> 
+  knitr::kable()
 ```
 
 
@@ -689,6 +629,20 @@ pp_check(AR_task_language_age_m_sampler, ndraws = 100)
 
 ```
 
+
+```{r, eval = TRUE}
+AR_task_language_age_m <- readRDS("models/AR_task_language_age_m.rds")
+AR_task_language_age_m_sampler <- readRDS("models/replication/sampler_check/AR_task_language_age_m_rep_sampler.rds")
+
+fit_compare <- diff_point_est(AR_task_language_age_m,
+                   AR_task_language_age_m_sampler)
+
+fit_compare |> 
+  mutate(across(contains("Diff"),
+                ~round(.x, 3))) |> 
+  knitr::kable()
+```
+
 ## VD
 The authors selected the model with age & language as predictors as the best model.
 
@@ -721,7 +675,18 @@ pp_check(VD_age_language_m_sampler, ndraws = 100)
 
 ```
 
+```{r, eval = TRUE}
+VD_age_language_m <- readRDS("models/VD_age_language_m.rds")
+VD_age_language_m_sampler <- readRDS("models/replication/sampler_check/VD_age_language_m_rep_sampler.rds")
 
+fit_compare <- diff_point_est(VD_age_language_m,
+                   VD_age_language_m_sampler)
+
+fit_compare |> 
+  mutate(across(contains("Diff"),
+                ~round(.x, 3))) |> 
+  knitr::kable()
+```
 
 ## F0V
 The authors selected the model with task, age & language as predictors as the best model.
@@ -743,7 +708,7 @@ F0V_task_language_age_m_sampler <-
     data = data_F0V_multiple_final, 
     family = student,
     prior = priors1,
-    file = here("models", "replication", "sampler_check", "F0V_task_language_age_m_rep_sampler_new"),
+    file = here("models", "replication", "sampler_check", "F0V_task_language_age_m_rep_sampler"),
     sample_prior = T,
     iter = 5000, 
     warmup = 500,
@@ -762,32 +727,19 @@ pp_check(F0V_task_language_age_m_sampler, ndraws = 100)
 ```
 
 We compare point estimates to the original model (i.e., or replication of it, because the original one was not available):
-
 ```{r f0v-comparison}
 # load original model
 F0V_task_langugae_age_m_rep <- readRDS("~/ids-meta-replication/models/replication/F0V_task_language_age_m_rep.rds")
+F0V_task_langugae_age_m_sampler<- readRDS("models/replication/sampler_check/F0V_task_language_age_m_rep_sampler.rds")
 
-source("functions.R")
-diff_F0V <- diff_point_est(F0V_task_language_age_m_rep, F0V_task_language_age_m_sampler)
 
+
+fit_compare <- diff_point_est(F0V_task_language_age_m_rep, F0V_task_language_age_m_sampler)
+fit_compare |> 
+  mutate(across(contains("Diff"),
+                ~round(.x, 3))) |> 
+  knitr::kable()
 ```
-
-
-Now we check convergence: 
-```{r}
-lp_F0V <- bayesplot::log_posterior(F0V_task_language_age_m_sampler)
-np_F0V <- bayesplot::nuts_params(F0V_task_language_age_m_sampler)
-bayesplot::mcmc_nuts_divergence(np_F0V, lp_F0V)
-```
-
-```{r}
-bayesplot::mcmc_parcoord(F0V_task_language_age_m_sampler, np = np_F0V, pars = c("Intercept","b_Age_months","b_LanguageBritishEnglish"))
-```
-
-```{r}
-bayesplot::mcmc_pairs(F0V_task_language_age_m_sampler, np = np_F0V, pars = c("Intercept","nu"))
-```
-
 
 
 
