@@ -384,8 +384,7 @@ VD_intercept_m <-
 
 ```
 
-
-Then, in the original code, `AR_task_language_age_m` was not estimated with `brms::brm_multiple`, but with the normal brms setting - the results therefore ignore the uncertainty of MICE imputation. Additionally, this leads to a different number of posterior samples, which impedes the calculation of model weights.
+Then, in the original code, `AR_task_language_age_m` was seemingly not estimated with `brms::brm_multiple`, but with the normal brms setting - the results therefore ignore the uncertainty of MICE imputation. Additionally, this leads to a different number of posterior samples, which impedes the calculation of model weights.
 
 ```{r}
 AR_task_language_age_m <- 
@@ -675,8 +674,10 @@ pp_check(VD_age_language_m_sampler, ndraws = 100)
 
 ```
 
+
+Need to use the replicated model again: 
 ```{r, eval = TRUE}
-VD_age_language_m <- readRDS("models/VD_age_language_m.rds")
+VD_age_language_m <- readRDS("models/replication/VD_age_language_m_rep.rds")
 VD_age_language_m_sampler <- readRDS("models/replication/sampler_check/VD_age_language_m_rep_sampler.rds")
 
 fit_compare <- diff_point_est(VD_age_language_m,
@@ -727,10 +728,10 @@ pp_check(F0V_task_language_age_m_sampler, ndraws = 100)
 ```
 
 We compare point estimates to the original model (i.e., or replication of it, because the original one was not available):
-```{r f0v-comparison}
+```{r f0v-comparison, eval = TRUE}
 # load original model
-F0V_task_langugae_age_m_rep <- readRDS("~/ids-meta-replication/models/replication/F0V_task_language_age_m_rep.rds")
-F0V_task_langugae_age_m_sampler<- readRDS("models/replication/sampler_check/F0V_task_language_age_m_rep_sampler.rds")
+F0V_task_language_age_m_rep <- readRDS("models/replication/F0V_task_language_age_m_rep.rds")
+F0V_task_language_age_m_sampler<- readRDS("models/replication/sampler_check/F0V_task_language_age_m_rep_sampler.rds")
 
 
 
