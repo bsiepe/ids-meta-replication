@@ -54,7 +54,8 @@ rsconnect/
 data/
 
 # all models
-models/
+models/*.rds
+models/*.RDS
 
 # not yet working Docker & Make
 Dockerfile
