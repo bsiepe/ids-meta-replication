@@ -39,7 +39,7 @@ Load the necessary packages and set the seed for reproducibility.
 library(brms)
 library(tidyverse)
 library(here)
-# library(renv)
+library(renv)
 library(tidybayes)
 library(RoBMA)
 library(osfr)
@@ -52,8 +52,7 @@ source("functions.R")
 ``` 
 
 # Publication Bias 
-Here, we intended to  use Robust Bayesian Meta-Analyses to fit an ensemble of meta-analytic models, which would then be averaged with Bayesian Model Averaging. These models also include a publication bias adjustment.
-https://fbartos.github.io/RoBMA/reference/RoBMA.reg.html
+Here, we intended to  use Robust Bayesian Meta-Analyses ([RoBMA](https://fbartos.github.io/RoBMA/reference/RoBMA.reg.html)) to fit an ensemble of meta-analytic models, which would then be averaged with Bayesian Model Averaging. These models also include a publication bias adjustment. 
 
 
 We used an auxiliary function to estimate all model-averaged models. However, these analyses did not converge, so we just include the code for transparency.
@@ -534,8 +533,8 @@ F0_task_environment_language_age_m_sampler <-
 ### Compare Point Estimates
 We now compare the point estimates of the re-estimated model with those of the original model:
 ```{r, eval = TRUE}
-F0_task_environment_language_age_m <- readRDS("models/F0_task_environment_language_age_m.rds")
-F0_task_environment_language_age_m_sampler <- readRDS("models/replication/sampler_check/F0_task_environment_language_age_m_rep_sampler.rds")
+F0_task_environment_language_age_m <- readRDS(here("models", "F0_task_environment_language_age_m.rds"))
+F0_task_environment_language_age_m_sampler <- readRDS(here("models", "replication", "sampler_check", "F0_task_environment_language_age_m_rep_sampler.rds"))
 
 fit_compare <- diff_point_est(F0_task_environment_language_age_m,
                    F0_task_environment_language_age_m_sampler)
@@ -551,7 +550,7 @@ fit_compare |>
 The authors selected the model with age & language as predictors as the best model.
 
 ```{r vsa-sampler}
-data_VSA_multiple_final <- readRDS(here("data/data_VSA_multiple_final.RData"))
+data_VSA_multiple_final <- readRDS(here("data", "data_VSA_multiple_final.RData"))
 
 baseline_f <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + 
                    Language + Age_months + (1 | Language/id_site/measurement_num))
@@ -583,8 +582,8 @@ pp_check(VSA_age_language_m_sampler, ndraws = 100)
 ### Compare Point Estimates
 We now compare the point estimates of the re-estimated model with those of the original model (or rather, our replication of it):
 ```{r, eval = TRUE}
-VSA_age_language_m <- readRDS("models/replication/VSA_age_language_m_rep.rds")
-VSA_age_language_m_sampler <- readRDS("models/replication/sampler_check/VSA_age_language_m_rep_sampler.rds")
+VSA_age_language_m <- readRDS(here("models", "replication", "VSA_age_language_m_rep.rds"))
+VSA_age_language_m_sampler <- readRDS(here("models", "replication", "sampler_check", "VSA_age_language_m_rep_sampler.rds"))
 
 fit_compare <- diff_point_est(VSA_age_language_m ,
                    VSA_age_language_m_sampler)
@@ -600,7 +599,7 @@ fit_compare |>
 The authors selected the model with task, age & language as predictors as the best model.
 
 ```{r ar-sampler}
-data_AR_multiple_final <- readRDS(here("data/data_AR_multiple_final.RData"))
+data_AR_multiple_final <- readRDS(here("data", "data_AR_multiple_final.RData"))
 baseline_t <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Age_months + 
                    Language + Task + (1 | Language/id_site/measurement_num))
 
@@ -630,8 +629,8 @@ pp_check(AR_task_language_age_m_sampler, ndraws = 100)
 
 
 ```{r, eval = TRUE}
-AR_task_language_age_m <- readRDS("models/AR_task_language_age_m.rds")
-AR_task_language_age_m_sampler <- readRDS("models/replication/sampler_check/AR_task_language_age_m_rep_sampler.rds")
+AR_task_language_age_m <- readRDS(here("models", "AR_task_language_age_m.rds"))
+AR_task_language_age_m_sampler <- readRDS(here("models", "replication", "sampler_check", "AR_task_language_age_m_rep_sampler.rds"))
 
 fit_compare <- diff_point_est(AR_task_language_age_m,
                    AR_task_language_age_m_sampler)
@@ -646,7 +645,7 @@ fit_compare |>
 The authors selected the model with age & language as predictors as the best model.
 
 ```{r vd-sampler}
-data_VD_multiple_final <- readRDS(here("data/data_VD_multiple_final.RData"))
+data_VD_multiple_final <- readRDS(here("data", "data_VD_multiple_final.RData"))
 baseline_f <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + 
                    Language + Age_months + (1 | Language/id_site/measurement_num))
 
@@ -677,8 +676,8 @@ pp_check(VD_age_language_m_sampler, ndraws = 100)
 
 Need to use the replicated model again: 
 ```{r, eval = TRUE}
-VD_age_language_m <- readRDS("models/replication/VD_age_language_m_rep.rds")
-VD_age_language_m_sampler <- readRDS("models/replication/sampler_check/VD_age_language_m_rep_sampler.rds")
+VD_age_language_m <- readRDS(here("models", "replication", "VD_age_language_m_rep.rds"))
+VD_age_language_m_sampler <- readRDS(here("models", "replication", "sampler_check", "VD_age_language_m_rep_sampler.rds"))
 
 fit_compare <- diff_point_est(VD_age_language_m,
                    VD_age_language_m_sampler)
@@ -693,7 +692,7 @@ fit_compare |>
 The authors selected the model with task, age & language as predictors as the best model.
 
 ```{r f0v-sampler}
-data_F0V_multiple_final <- readRDS(here("data/data_F0V_multiple_final.RData"))
+data_F0V_multiple_final <- readRDS(here("data", "data_F0V_multiple_final.RData"))
 baseline_t <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Age_months + 
                    Language + Task + (1 | Language/id_site/measurement_num))
 priors1 <- c(brms::prior(normal(0, 2.5), class = Intercept),
@@ -730,8 +729,8 @@ pp_check(F0V_task_language_age_m_sampler, ndraws = 100)
 We compare point estimates to the original model (i.e., or replication of it, because the original one was not available):
 ```{r f0v-comparison, eval = TRUE}
 # load original model
-F0V_task_language_age_m_rep <- readRDS("models/replication/F0V_task_language_age_m_rep.rds")
-F0V_task_language_age_m_sampler<- readRDS("models/replication/sampler_check/F0V_task_language_age_m_rep_sampler.rds")
+F0V_task_language_age_m_rep <- readRDS(here("models", "replication", "F0V_task_language_age_m_rep.rds"))
+F0V_task_language_age_m_sampler<- readRDS(here("models", "replication", "sampler_check", "F0V_task_language_age_m_rep_sampler.rds"))
 
 
 
@@ -741,7 +740,6 @@ fit_compare |>
                 ~round(.x, 3))) |> 
   knitr::kable()
 ```
-
 
 
 

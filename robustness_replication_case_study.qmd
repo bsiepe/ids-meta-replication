@@ -42,13 +42,9 @@ We first load the necessary packages and set the seed for reproducibility.
 library(brms)
 library(tidyverse)
 library(here)
-# library(renv)
 library(tidybayes)
 library(performance)
-#library(RoBMA)
-#library(osfr)
 library(bayesplot)
-#library(pander)
 library(knitr)
 
 set.seed(35032)
