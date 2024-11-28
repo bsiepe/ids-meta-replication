@@ -25,6 +25,12 @@ Contains all original models, and our replications (in `/models/replication/`). 
 As these files are too large for GitHub, we uploaded them to associated project on the [Open Science Framework](https://osf.io/ukfrc/) and provide a script (`models/osf_models_download.R`) to download them from the OSF. 
 Alternatively, you can re-run our quarto files to obtain all models. 
 
+### `/manuscript/`
+Contains the reproduction report and the pre-analysis plan.
+
+### `/output/replication`
+Contains output files from the robustness replication. 
+
 ## Reproducible Environment
 We used the `renv` package to create a reproducible package environment. Instructions on how to use `renv` can be found on its [homepage](https://rstudio.github.io/renv/index.html).
 
