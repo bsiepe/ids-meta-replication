@@ -1,7 +1,7 @@
-# Replication of Cox et al. (2023)
+# Robustness Reproduction of Cox et al. (2023)
 
-This repository contains the code for the robustness replication of Cox, C., Bergmann, C., Fowler, E. et al. A systematic review and Bayesian meta-analysis of the acoustic features of infant-directed speech. Nat Hum Behav 7, 114–133 (2023). https://doi.org/10.1038/s41562-022-01452-1
-This robustness replication is part of the Institute4Replication (I4R) effort to reproduce and/or replicate articles published in Nature Human Behavior. 
+This repository contains the code for the robustness reproduction of Cox, C., Bergmann, C., Fowler, E. et al. A systematic review and Bayesian meta-analysis of the acoustic features of infant-directed speech. Nat Hum Behav 7, 114–133 (2023). https://doi.org/10.1038/s41562-022-01452-1
+This robustness reproduction is part of the Institute4Replication (I4R) effort to reproduce and/or replicate articles published in Nature Human Behavior. We sometimes use the term "replication", but always refer to out attempt to reproduce and extend the analyses of the original authors. No new data were collected in this project.
 
 
 
