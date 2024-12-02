@@ -23,6 +23,7 @@ Contains all raw data used. As we simply load all data from the original reposit
 ### `/models/` 
 Contains all original models, and our replications (in `/models/replication/`). The sub-folder `/models/replication/sampler_check/` contains all models used in the investigation of different sampler settings. 
 As these files are too large for GitHub, we uploaded them to associated project on the [Open Science Framework](https://osf.io/ukfrc/) and provide a script (`models/osf_models_download.R`) to download them from the OSF. 
+Please note that we had to delete one large model file (`F0_language_m_rep.rds`) to comply with OSF's file size limit. The model can be reproduced by running the code in `reproduction_analysis.qmd`.
 Alternatively, you can re-run our quarto files to obtain all models. 
 
 ### `/manuscript/`
