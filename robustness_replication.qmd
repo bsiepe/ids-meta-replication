@@ -36,12 +36,12 @@ execute:
 # Preparation
 Load the necessary packages and set the seed for reproducibility.
 ```{r setup, eval = TRUE}
-library(brms)
 library(tidyverse)
 library(here)
 library(renv)
 library(tidybayes)
 library(RoBMA)
+library(brms)
 library(osfr)
 library(bayesplot)
 library(pander)
@@ -84,10 +84,10 @@ First estimate the missing models, using the same prior specification as used in
 Environment as predictor: 
 ```{r}
 baseline_envir <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Environment + (1 | Language/id_site/measurement_num))
-priors2 <- c(prior(normal(0, 2.5), class = Intercept),
-             prior(normal(1, 1), class = sd),
-             prior(normal(0, 1), class = b),
-             prior(gamma(2, 0.1), class = nu))
+priors2 <- c(brms::prior(normal(0, 2.5), class = Intercept),
+             brms::prior(normal(1, 1), class = sd),
+             brms::prior(normal(0, 1), class = b),
+             brms::prior(gamma(2, 0.1), class = nu))
 
 F0_environment_m <- 
   brm_multiple(
@@ -193,10 +193,10 @@ pp_check(F0V_language_m, ndraws = 50)
 Task as predictor
 ```{r}
 baseline_task <- bf(Effect_Size | se(Effect_Size_se) ~ 1 + Task + (1 | Language/id_site/measurement_num))
-priors2 <- c(prior(normal(0, 2.5), class = Intercept),
-             prior(normal(1, 1), class = sd),
-             prior(normal(0, 1), class = b),
-             prior(gamma(2, 0.1), class = nu))
+priors2 <- c(brms::prior(normal(0, 2.5), class = Intercept),
+             brms::prior(normal(1, 1), class = sd),
+             brms::prior(normal(0, 1), class = b),
+             brms::prior(gamma(2, 0.1), class = nu))
 
 F0_task_m <- 
   brm_multiple(
@@ -407,7 +407,7 @@ AR_task_language_age_m <-
 ```
 
 
-We re-estimate 
+We re-estimated this model with brm_multiple. 
 
 ## Estimate Model Weights
 Now load in all relevant models to the environment.

@@ -4321,6 +4321,29 @@ df_evidence |>
 ```
 
 
+
+Additionally, we check the number of divergent transitions in our reproduced models: 
+```{r, eval = TRUE}
+replication_mods <- list.files("models/replication/", pattern = "*.rds", full.names = TRUE)
+replication_mods_name <- gsub(".rds", "", basename(replication_mods))
+
+n_divs <- lapply(seq_along(replication_mods), function(i) {
+  mod <- tryCatch(readRDS(replication_mods[i]), error = function(e) NA)
+  if (!any(is.na(mod))) {
+    setNames(rstan::get_num_divergent(mod$fit), replication_mods_name[i])
+  } else {
+    NULL
+  }
+})
+
+filtered_n_divs <- unlist(n_divs)
+filtered_n_divs[filtered_n_divs > 0]
+
+
+```
+
+
+
 R2: Compare Best Models
 ---------------
 
